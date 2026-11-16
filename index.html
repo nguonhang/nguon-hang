@@ -434,11 +434,15 @@ function freightLine(r){
   const kg=pc(QS.product,'truckTons')*1000,pk=r.q.perKg;
   return '<div class="note num" style="margin-top:6px">Cước xe '+fmt(r.km)+' km'+(cfg.trips===2?' (khứ hồi)':'')+': <b>'+fmt(kg)+' kg × '+fmt1(pk)+' đ/kg = '+fmt(r.q.trip)+' đ</b></div>';
 }
+function profitLine(r,tons){
+  if(!tons)return '';const kg=tons*1000;
+  return '<div class="note num" style="margin-top:4px">Chở '+fmt(tons)+' tấn: khách trả <b>'+fmt(r.q.offer*kg)+' đ</b> · <b style="color:var(--accent,#1d6a45)">lãi '+fmt1(r.q.offer-r.q.cost)+' đ/kg × '+fmt(kg)+' kg = '+fmt(Math.round((r.q.offer-r.q.cost)*kg))+' đ</b></div>';
+}
 function cardHTML(r,tons){
   const s=r.s,open=QS.open===s.id;
   return '<div class="card res"><button class="res-head" data-open="'+esc(s.id)+'" aria-expanded="'+open+'">'+
     '<div><div class="res-name">'+esc(s.name)+'</div><div class="res-meta">'+esc(s.place)+(s.phone?' · '+esc(s.phone):'')+'</div>'+
-    '<div>'+ageChip(r.age)+'<span class="chip am">mua '+fmt(r.it.price)+' đ/kg</span></div>'+freightLine(r)+'</div>'+
+    '<div>'+ageChip(r.age)+'<span class="chip am">mua '+fmt(r.it.price)+' đ/kg</span></div>'+freightLine(r)+profitLine(r,tons)+'</div>'+
     '<div class="right"><div class="km num" id="hk-'+esc(s.id)+'">'+(r.src==='ước tính'?'≈ ':'')+fmt(r.km)+'<small>km</small></div><div class="note" id="hs-'+esc(s.id)+'">'+esc(r.src)+'</div><div class="offer num" id="ho-'+esc(s.id)+'">giá giao '+fmt(r.q.offer)+' đ/kg</div></div></button>'+
     (open?detailHTML(r,tons):'')+'</div>';
 }
