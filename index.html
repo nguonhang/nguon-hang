@@ -611,10 +611,13 @@ function openEditor(id){
 }
 function renderEdItems(){
   const box=$('#ed-items');
-  box.innerHTML=ED.items.map((it,i)=>'<div class="item-row"><label>Loại hàng<select data-k="product" data-i="'+i+'">'+(PRODUCTS.indexOf(it.product)<0&&it.product?'<option selected>'+esc(it.product)+'</option>':'')+PRODUCTS.map(p=>'<option'+(p===it.product?' selected':'')+'>'+esc(p)+'</option>').join('')+'</select></label>'+
+  const list=allProducts();ED.items.forEach(i=>{if(i.product&&list.indexOf(i.product)<0)list.push(i.product);});
+  box.innerHTML=ED.items.map((it,i)=>'<div class="item-row"><label>Loại hàng<select data-k="product" data-i="'+i+'">'+list.map(p=>'<option'+(p===it.product?' selected':'')+'>'+esc(p)+'</option>').join('')+'<option value="__new">+ Thêm loại hàng mới...</option></select></label>'+
     '<label>Giá (đ/kg)<input class="numfmt" inputmode="numeric" data-k="price" data-i="'+i+'" value="'+(it.price?fmt(it.price):'')+'"></label>'+
     '<button class="btn small danger" data-rm="'+i+'" aria-label="Xóa dòng">Bỏ</button></div>').join('');
-  box.querySelectorAll('input,select').forEach(inp=>inp.addEventListener('input',()=>{const it=ED.items[+inp.dataset.i];it[inp.dataset.k]=inp.dataset.k==='price'?parseN(inp.value):inp.value;}));
+  box.querySelectorAll('input,select').forEach(inp=>inp.addEventListener('input',()=>{const it=ED.items[+inp.dataset.i];
+    if(inp.value==='__new'){const n=(prompt('Tên loại hàng mới (ví dụ: Mùn cưa ép, Vỏ hạt điều):')||'').trim();if(n)it.product=n;renderEdItems();return;}
+    it[inp.dataset.k]=inp.dataset.k==='price'?parseN(inp.value):inp.value;}));
   box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ED.items.splice(+b.dataset.rm,1);renderEdItems();});
 }
 function parseMapsInput(t){
