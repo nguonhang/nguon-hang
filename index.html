@@ -168,7 +168,6 @@ body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset
       <div class="note">Dùng cho loại hàng nào anh chưa cài riêng ở trên.</div>
       <div class="grid2">
         <label>Cước xe (đ / km, chạy 1 chuyến)<input id="c-rateKm" class="numfmt" inputmode="numeric"></label>
-        <label>Tải trọng xe thường dùng (tấn), chỉ dùng khi chưa nhập số tấn<input id="c-truckTons" class="numfmt" inputmode="numeric"></label>
         <label>Tính cước
           <select id="c-trips"><option value="1">Một chiều (km × cước)</option><option value="2">Khứ hồi (gấp đôi)</option></select>
         </label>
@@ -261,8 +260,8 @@ $('#places').innerHTML=PROV.map(s=>'<option value="'+esc(s.split('|')[0])+'">').
 
 /* ---------- dữ liệu: Google Sheets qua Apps Script ---------- */
 const PRODUCTS=['Viên nén bả điều','Viên nén gỗ','Dăm chip','Củi đòn','Trấu viên'];
-const DEF={rateKm:18000,truckTons:15,trips:1,loadKg:60,marginKg:100,factor:1.3,'p|Củi đòn|truckTons':20,'p|Viên nén bả điều|truckTons':40};
-const PK=[['truckTons','Xe thường dùng (tấn)'],['rateKm','Cước xe (đ/km)'],['loadKg','Bốc xếp (đ/kg)'],['marginKg','Lãi (đ/kg)']];
+const DEF={rateKm:18000,truckTons:15,trips:1,loadKg:60,marginKg:100,factor:1.3};
+const PK=[['rateKm','Cước xe (đ/km)'],['loadKg','Bốc xếp (đ/kg)'],['marginKg','Lãi (đ/kg)']];
 function pc(p,k){const v=cfg['p|'+p+'|'+k];return v>0?v:cfg[k];}
 let sellers=[],cfg=Object.assign({},DEF),loaded=false,PIN='',ME={admin:false},USERS=[],VIEWAS='';
 function hsh(t){let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return (h>>>0).toString(36);}
@@ -341,8 +340,8 @@ async function roadKms(dest,list){
 
 /* ---------- tính giá ---------- */
 function loadKgFor(prod,tons){
-  const cap=pc(prod,'truckTons');
-  if(!tons)return cap*1000;
+  const cap=40;
+  if(!tons)return 20000;
   return tons/Math.ceil(tons/cap)*1000;
 }
 function quote(price,km,margin,prod,tons){
@@ -465,7 +464,7 @@ function cardHTML(r,tons){
 }
 function calcHTML(r,tons){
   const q=r.q,it=r.it;
-  const trips=tons?Math.ceil(tons/pc(QS.product,'truckTons')):0;
+  const trips=tons?Math.ceil(tons/40):0;
   return '<table class="calc num">'+
     '<tr><td>Giá mua tại nơi bán</td><td>'+fmt(it.price)+' đ/kg</td></tr>'+
     '<tr><td>Cước xe: '+fmt(r.km)+' km × '+fmt(pc(QS.product,'rateKm'))+' đ'+(cfg.trips===2?' × 2':'')+' = '+fmt(q.trip)+' đ/chuyến<br><span class="note">'+fmt(q.loadKg)+' kg × '+fmt1(q.perKg)+' đ/kg = '+fmt(q.trip)+' đ</span></td><td>'+fmt1(q.perKg)+' đ/kg</td></tr>'+
@@ -679,10 +678,10 @@ $('#s-export').onclick=()=>{
 $('#c-demo-clear').onclick=async()=>{const d=sellers.filter(s=>s.demo);if(!d.length){toast('Không có người bán mẫu');return;}try{for(const s of d)await deleteSeller(s.id);toast('Đã xóa '+d.length+' người bán mẫu');}catch(e){toast('Chưa xóa được');}};
 
 /* ---------- Cài đặt ---------- */
-const CF=[['rateKm','#c-rateKm'],['truckTons','#c-truckTons'],['loadKg','#c-loadKg'],['marginKg','#c-marginKg']];
+const CF=[['rateKm','#c-rateKm'],['loadKg','#c-loadKg'],['marginKg','#c-marginKg']];
 function fillProdCfg(){
   const box=$('#c-prods');if(!box)return;
-  box.innerHTML='<b>Cài đặt theo từng loại hàng</b><div class="note">Mỗi loại hàng một xe, một cước riêng. Khi anh nhập số tấn ở mục Tra giá thì app tính cước theo số tấn đó; số tấn xe ở đây chỉ dùng khi anh chưa nhập, và để chia chuyến khi mua nhiều hơn một xe. Ô để trống thì dùng số mặc định chung ở dưới.</div>'+
+  box.innerHTML='<b>Cài đặt theo từng loại hàng</b><div class="note">Mỗi loại hàng một cước, một bốc xếp, một mức lãi riêng. Số tấn lấy từ ô Số tấn ở mục Tra giá. Ô để trống thì dùng số mặc định chung ở dưới.</div>'+
     allProducts().map(p=>'<div class="stack" style="border-top:1px solid var(--line);padding-top:10px"><b>'+esc(p)+'</b><div class="grid2">'+
       PK.map(([k,l])=>'<label>'+l+'<input class="numfmt" inputmode="numeric" data-pp="'+esc(p)+'" data-pk="'+k+'" value="'+(cfg['p|'+p+'|'+k]>0?fmt(cfg['p|'+p+'|'+k]):'')+'" placeholder="'+fmt(cfg[k])+' (chung)"></label>').join('')+'</div></div>').join('');
   box.querySelectorAll('input').forEach(i=>i.addEventListener('input',()=>{cfg['p|'+i.dataset.pp+'|'+i.dataset.pk]=parseN(i.value);saveCfgSoon();if(QS.searched)renderResults();}));
