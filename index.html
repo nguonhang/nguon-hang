@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nguồn Hàng</title>
+<meta name="theme-color" content="#1d6a45">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Nguồn Hàng">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap">
+<style>
+
+/* Bố cục: một cột hẹp, thẻ nguồn hàng xếp dọc theo khoảng cách; số tiền màu hổ phách nổi bật, còn lại xanh rừng tiết chế. */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --surface2:#f7f9f6; --ink:#17211c; --muted:#5b6861; --line:#dbe2dc;
+  --accent:#1d6a45; --accent-ink:#ffffff; --accent-soft:#e1efe6;
+  --price:#9a4506; --price-soft:#fcefdd;
+  --warn:#a02c2c; --warn-soft:#fbe8e5; --ok:#1d6a45;
+  --shadow:0 1px 2px rgba(20,35,28,.06),0 4px 14px rgba(20,35,28,.05);
+  --font:'Be Vietnam Pro',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1713; --surface:#17211c; --surface2:#1c2822; --ink:#e8efea; --muted:#9aa9a0; --line:#2b3a32;
+  --accent:#4cc08a; --accent-ink:#06180f; --accent-soft:#1c3a2b;
+  --price:#f0a45c; --price-soft:#33240f;
+  --warn:#ff8f86; --warn-soft:#3a1c19; --ok:#4cc08a;
+  --shadow:none; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0f1713; --surface:#17211c; --surface2:#1c2822; --ink:#e8efea; --muted:#9aa9a0; --line:#2b3a32;
+  --accent:#4cc08a; --accent-ink:#06180f; --accent-soft:#1c3a2b;
+  --price:#f0a45c; --price-soft:#33240f;
+  --warn:#ff8f86; --warn-soft:#3a1c19; --ok:#4cc08a;
+  --shadow:none; color-scheme:dark;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;
+  padding-block:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:780px;margin:0 auto;padding-block:16px 48px}
+h1{font-size:20px;margin:0;font-weight:700;letter-spacing:-.01em}
+.sub{color:var(--muted);font-size:13px;margin:2px 0 0}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:14px}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px}
+.tabs button{flex:1;border:0;background:none;color:var(--muted);font:600 14px var(--font);padding:10px 8px;border-radius:9px;cursor:pointer;min-width:0}
+.tabs button[aria-selected=true]{background:var(--accent);color:var(--accent-ink)}
+.tabs button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.stack{display:flex;flex-direction:column;gap:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media (max-width:520px){.grid2,.grid3{grid-template-columns:1fr}.grid2.keep{grid-template-columns:1fr 1fr}}
+label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;font-weight:600;color:var(--muted);min-width:0}
+input,select,textarea{font:500 15px var(--font);color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:9px;padding:10px 11px;width:100%;min-width:0}
+textarea{min-height:120px;resize:vertical}
+.btn{font:600 14px var(--font);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 14px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--warn);border-color:var(--warn)}
+.btn.small{padding:6px 10px;font-size:13px}
+.btn:disabled{opacity:.55;cursor:default}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row.sp{justify-content:space-between}
+.muted{color:var(--muted)}
+.note{font-size:12.5px;color:var(--muted)}
+.status{font-size:13px;margin-top:6px}
+.status.ok{color:var(--ok)} .status.bad{color:var(--warn)}
+.num{font-variant-numeric:tabular-nums}
+.res{padding:0;overflow:hidden}
+.res-head{display:grid;grid-template-columns:1fr auto;gap:12px;padding:14px;cursor:pointer;width:100%;background:none;border:0;text-align:left;font:inherit;color:inherit}
+.res-name{font-weight:700;font-size:16px;overflow-wrap:anywhere}
+.res-meta{color:var(--muted);font-size:13px;margin-top:2px;overflow-wrap:anywhere}
+.km{font-size:22px;font-weight:700;letter-spacing:-.02em}
+.km small{font-size:12px;font-weight:600;color:var(--muted);margin-left:2px}
+.offer{color:var(--price);font-weight:700;font-size:15px}
+.right{text-align:right}
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);margin:2px 4px 0 0}
+.chip.old{background:var(--warn-soft);color:var(--warn)}
+.chip.am{background:var(--price-soft);color:var(--price)}
+.detail{border-top:1px solid var(--line);padding:14px;background:var(--surface2);display:flex;flex-direction:column;gap:12px}
+table.calc{width:100%;border-collapse:collapse;font-size:14px}
+table.calc td{padding:6px 0;border-bottom:1px dashed var(--line);vertical-align:top}
+table.calc td:last-child{text-align:right;font-weight:600}
+table.calc tr.total td{border-bottom:0;padding-top:10px;font-size:16px;color:var(--price);font-weight:700}
+.quote{background:var(--price-soft);border-radius:10px;padding:12px;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.empty{text-align:center;padding:28px 16px;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font-size:16px;margin-bottom:4px}
+.banner{background:var(--price-soft);color:var(--price);border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:12px}
+.sheet-bg{position:fixed;inset:0;background:rgba(10,18,14,.5);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:640px;max-height:92vh;overflow:auto;border-radius:16px 16px 0 0;
+  padding:16px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+@media (min-width:700px){.sheet-bg{align-items:center}.sheet{border-radius:16px}}
+.item-row{display:grid;grid-template-columns:1.3fr 1fr auto;gap:8px;align-items:end}
+@media (max-width:420px){.item-row{grid-template-columns:1fr 1fr}.item-row .btn{grid-column:1/-1}}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:99px;font-size:14px;z-index:40}
+@media (prefers-reduced-motion:no-preference){.res{transition:box-shadow .15s}}
+
+[hidden]{display:none!important}
+html,body{margin:0}
+body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.login{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:center;padding:24px}
+.login .card{width:100%;max-width:360px}
+.syncing{font-size:12.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>Nguồn Hàng Chất Đốt</h1>
+      <p class="sub">Tìm người bán gần nơi khách, tính cước và giá chào.</p>
+    </div>
+    <div class="row"><span class="syncing" id="sync"></span><button class="btn small" id="refresh" title="Tải lại dữ liệu">Tải lại</button></div>
+  </div>
+  <div id="banner"></div>
+  <div class="tabs" role="tablist">
+    <button role="tab" id="tab-find" aria-selected="true">Tra giá</button>
+    <button role="tab" id="tab-sellers" aria-selected="false">Người bán</button>
+    <button role="tab" id="tab-set" aria-selected="false">Cài đặt</button>
+  </div>
+
+  <section id="pane-find" class="stack">
+    <div class="card stack">
+      <div class="grid2">
+        <label>Loại hàng khách hỏi
+          <select id="q-product"></select>
+        </label>
+        <label>Số tấn (không bắt buộc)
+          <input id="q-tons" class="numfmt" inputmode="numeric" placeholder="vd: 20">
+        </label>
+      </div>
+      <label>Nơi giao hàng
+        <input id="q-dest" list="places" autocomplete="off" placeholder="vd: Củ Chi, TP.HCM hoặc xã A, huyện B, tỉnh C">
+      </label>
+      <div class="row">
+        <button class="btn primary" id="q-go">Tìm nguồn hàng</button>
+        <div class="row" id="q-sort" style="margin-left:auto">
+          <span class="note">Xếp theo</span>
+          <button class="btn small" data-sort="km">Gần nhất</button>
+          <button class="btn small" data-sort="price">Giá giao rẻ nhất</button>
+        </div>
+      </div>
+      <div id="q-status" class="status"></div>
+    </div>
+    <div id="results" class="stack"></div>
+  </section>
+
+  <section id="pane-sellers" class="stack" hidden>
+    <div class="card stack">
+      <div class="row sp">
+        <input id="s-search" placeholder="Tìm tên, nơi bốc, loại hàng" style="flex:1;min-width:180px">
+        <button class="btn primary" id="s-add">+ Thêm người bán</button>
+      </div>
+      <div class="row">
+        <button class="btn small" id="s-import">Dán từ Excel / Google Sheets</button>
+        <button class="btn small" id="s-export">Tải file CSV</button>
+        <button class="btn small" id="s-locate">Định vị người bán chưa có tọa độ</button>
+      </div>
+    </div>
+    <div id="s-list" class="stack"></div>
+  </section>
+
+  <section id="pane-set" class="stack" hidden>
+    <div class="card stack">
+      <div class="grid2">
+        <label>Cước xe (đ / km, chạy 1 chuyến)<input id="c-rateKm" class="numfmt" inputmode="numeric"></label>
+        <label>Tải trọng xe (tấn)<input id="c-truckTons" class="numfmt" inputmode="numeric"></label>
+        <label>Tính cước
+          <select id="c-trips"><option value="1">Một chiều (km × cước)</option><option value="2">Khứ hồi (gấp đôi)</option></select>
+        </label>
+        <label>Hệ số đường (dùng khi không có mạng bản đồ)<input id="c-factor" inputmode="decimal"></label>
+        <label>Bốc xếp (đ / kg)<input id="c-loadKg" class="numfmt" inputmode="numeric"></label>
+        <label>Lãi muốn có (đ / kg)<input id="c-marginKg" class="numfmt" inputmode="numeric"></label>
+      </div>
+      <p class="note">Km lấy theo đường xe chạy từ bản đồ OpenStreetMap. Khi không có mạng hoặc bản đồ không trả lời, app tạm ước tính bằng đường chim bay nhân hệ số, trong thẻ có ghi rõ. Anh luôn gõ được km thật trong từng thẻ.</p>
+    </div>
+    <div class="card stack">
+      <b>Dữ liệu</b>
+      <div class="note">Người bán, giá và cài đặt lưu trong Google Sheets của anh (các tab NguoiBan, DiaDanh, CaiDat). Anh có thể sửa trực tiếp trong Sheets, bấm "Tải lại" trong app để thấy.</div>
+      <div class="row"><button class="btn small danger" id="c-demo-clear">Xóa người bán mẫu</button><button class="btn small" id="c-logout">Đổi mã truy cập</button></div>
+    </div>
+  </section>
+</div>
+<datalist id="places"></datalist>
+<datalist id="products"></datalist>
+<div id="overlay"></div>
+<div id="toast"></div>
+<div id="login" class="login" hidden>
+  <div class="card stack">
+    <b style="font-size:18px">Nguồn Hàng Chất Đốt</b>
+    <label>Mã truy cập<input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="Nhập mã của anh"></label>
+    <div id="pin-msg" class="status bad"></div>
+    <button class="btn primary" id="pin-go">Vào</button>
+    <p class="note">Mã chỉ cần nhập một lần trên mỗi máy.</p>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const API='https://script.google.com/macros/s/AKfycbzsgr46oFrdMXEchaZ3-UL8ReTmPFzqCQYe9Cy-F9AgRVioiPAmZ_9pMzHc0f8MJazCuQ/exec';
+/* ---------- tiện ích ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+const parseN=s=>{const d=String(s==null?'':s).replace(/[^\d]/g,'');return d?Number(d):0;};
+const norm=s=>String(s||'').toLowerCase().replace(/đ/g,'d').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,' ').trim();
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+const daysAgo=iso=>{if(!iso)return null;const t=new Date(iso+'T00:00:00');if(isNaN(t))return null;return Math.max(0,Math.round((Date.now()-t.getTime())/864e5));};
+const uid=()=>'s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function toast(msg){const t=$('#toast');t.innerHTML='<div class="toast">'+esc(msg)+'</div>';clearTimeout(toast.t);toast.t=setTimeout(()=>{t.innerHTML='';},2600);}
+function hav(a,b,c,d){const r=Math.PI/180,R=6371,dl=(c-a)*r,dg=(d-b)*r;const x=Math.sin(dl/2)**2+Math.cos(a*r)*Math.cos(c*r)*Math.sin(dg/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
+const mapsLink=(la,ln)=>'https://www.google.com/maps/search/?api=1&query='+la+','+ln;
+
+/* ---------- địa danh có sẵn (tọa độ gần đúng) ---------- */
+const PROV=[
+'TP.HCM|10.7769|106.7009|hcm,tphcm,tp hcm,ho chi minh,sai gon,hcmc,sg','Hà Nội|21.0285|105.8542|hn','Hải Phòng|20.8449|106.6881','Đà Nẵng|16.0544|108.2022','Cần Thơ|10.0452|105.7469',
+'An Giang|10.3711|105.4328','Bà Rịa - Vũng Tàu|10.4960|107.1685|ba ria,brvt,ba ria vung tau','Bạc Liêu|9.2941|105.7216','Bắc Giang|21.2819|106.1975','Bắc Kạn|22.1470|105.8348','Bắc Ninh|21.1861|106.0763','Bến Tre|10.2434|106.3756',
+'Bình Dương|10.9804|106.6519|thu dau mot','Bình Định|13.7765|109.2237|quy nhon','Bình Phước|11.5349|106.8827|dong xoai','Bình Thuận|10.9289|108.1021|phan thiet','Cà Mau|9.1769|105.1524','Cao Bằng|22.6657|106.2522',
+'Đắk Lắk|12.6667|108.0383|buon ma thuot,dak lak','Đắk Nông|12.0042|107.6907|gia nghia,dak nong','Điện Biên|21.3860|103.0230','Đồng Nai|10.9574|106.8427|bien hoa','Đồng Tháp|10.4600|105.6330|cao lanh','Gia Lai|13.9833|108.0000|pleiku',
+'Hà Giang|22.8233|104.9836','Hà Nam|20.5411|105.9139|phu ly','Hà Tĩnh|18.3428|105.9057','Hải Dương|20.9373|106.3146','Hậu Giang|9.7840|105.4700|vi thanh','Hòa Bình|20.8171|105.3376','Hưng Yên|20.6464|106.0511',
+'Khánh Hòa|12.2388|109.1967|nha trang','Kiên Giang|10.0125|105.0809|rach gia','Kon Tum|14.3497|108.0005','Lai Châu|22.3964|103.4703','Lâm Đồng|11.9404|108.4583|da lat','Lạng Sơn|21.8537|106.7615','Lào Cai|22.4809|103.9755',
+'Long An|10.5435|106.4130|tan an','Nam Định|20.4388|106.1621','Nghệ An|18.6796|105.6813|vinh','Ninh Bình|20.2506|105.9745','Ninh Thuận|11.5643|108.9886|phan rang','Phú Thọ|21.3227|105.4020|viet tri','Phú Yên|13.0882|109.0929|tuy hoa',
+'Quảng Bình|17.4689|106.6223|dong hoi','Quảng Nam|15.5736|108.4740|tam ky','Quảng Ngãi|15.1205|108.7923','Quảng Ninh|20.9712|107.0448|ha long','Quảng Trị|16.8163|107.1003|dong ha','Sóc Trăng|9.6037|105.9739','Sơn La|21.3256|103.9188',
+'Tây Ninh|11.3100|106.0980','Thái Bình|20.4463|106.3366','Thái Nguyên|21.5928|105.8442','Thanh Hóa|19.8067|105.7852','Thừa Thiên Huế|16.4637|107.5909|hue','Tiền Giang|10.3600|106.3600|my tho','Trà Vinh|9.9347|106.3453',
+'Tuyên Quang|21.8236|105.2140','Vĩnh Long|10.2538|105.9722','Vĩnh Phúc|21.3089|105.6049|vinh yen','Yên Bái|21.7168|104.8986'];
+const PLACES=[
+'Củ Chi|TP.HCM|10.9733|106.4933','Hóc Môn|TP.HCM|10.8880|106.5950','Bình Chánh|TP.HCM|10.6870|106.5740','Thủ Đức|TP.HCM|10.8500|106.7550','Cát Lái|TP.HCM|10.7580|106.7920','Quận 7|TP.HCM|10.7340|106.7220','Cần Giờ|TP.HCM|10.4110|106.9550','Nhà Bè|TP.HCM|10.6950|106.7400',
+'Đồng Xoài|Bình Phước|11.5349|106.8827','Phước Long|Bình Phước|11.8330|106.9830','Bình Long|Bình Phước|11.6580|106.6020','An Lộc|Bình Phước|11.6580|106.6020','Chơn Thành|Bình Phước|11.4170|106.6330','Bù Đăng|Bình Phước|11.7640|107.2480',
+'Đồng Phú|Bình Phước|11.4370|106.9270','Lộc Ninh|Bình Phước|11.8390|106.5880','Hớn Quản|Bình Phước|11.6000|106.6900','Bù Gia Mập|Bình Phước|12.0000|107.0000','Phú Riềng|Bình Phước|11.6300|106.9500','Bù Đốp|Bình Phước|11.9900|106.7900',
+'Thủ Dầu Một|Bình Dương|10.9804|106.6519','Bến Cát|Bình Dương|11.1450|106.5930','Tân Uyên|Bình Dương|11.0700|106.7900','Dĩ An|Bình Dương|10.9060|106.7690','Thuận An|Bình Dương|10.9370|106.7130','Bàu Bàng|Bình Dương|11.2700|106.6200','Dầu Tiếng|Bình Dương|11.2820|106.3680','Phú Giáo|Bình Dương|11.2970|106.7940',
+'Biên Hòa|Đồng Nai|10.9574|106.8427','Long Khánh|Đồng Nai|10.9330|107.2400','Trảng Bom|Đồng Nai|10.9490|107.0090','Long Thành|Đồng Nai|10.7900|107.0200','Nhơn Trạch|Đồng Nai|10.7400|106.9000','Định Quán|Đồng Nai|11.1950|107.3500','Xuân Lộc|Đồng Nai|10.9200|107.4000','Vĩnh Cửu|Đồng Nai|11.0600|106.9300','Thống Nhất|Đồng Nai|10.9700|107.1600',
+'Trảng Bàng|Tây Ninh|11.0300|106.3700','Hòa Thành|Tây Ninh|11.2800|106.1300','Gò Dầu|Tây Ninh|11.0000|106.2600','Tân Châu|Tây Ninh|11.5400|106.1700','Tân Biên|Tây Ninh|11.5800|106.0000',
+'Bến Lức|Long An|10.6350|106.4900','Đức Hòa|Long An|10.8800|106.4100','Cần Giuộc|Long An|10.6000|106.6600','Cần Đước|Long An|10.5100|106.6000',
+'Phú Mỹ|Bà Rịa - Vũng Tàu|10.5800|107.0500','Cái Mép|Bà Rịa - Vũng Tàu|10.5300|107.0200','Vũng Tàu|Bà Rịa - Vũng Tàu|10.3460|107.0843','Long Điền|Bà Rịa - Vũng Tàu|10.4700|107.2000',
+'Đắk Mil|Đắk Nông|12.4500|107.6000','Đắk R\'lấp|Đắk Nông|11.8000|107.4200','Cư Jút|Đắk Nông|12.6700|107.8500','Đắk Song|Đắk Nông|12.2700|107.6200',
+'Di Linh|Lâm Đồng|11.5800|108.0700','Đức Trọng|Lâm Đồng|11.7330|108.3600','Bảo Lộc|Lâm Đồng|11.5480|107.8070','Bảo Lâm|Lâm Đồng|11.6000|107.7300',
+'Ea Kar|Đắk Lắk|12.8000|108.4500','Krông Búk|Đắk Lắk|12.8800|108.2800','An Khê|Gia Lai|13.9400|108.6500',
+'Móng Cái|Quảng Ninh|21.5300|107.9700','Đình Vũ|Hải Phòng|20.8000|106.8000'];
+
+const IDX={places:[],provs:[]};
+PLACES.forEach(s=>{const a=s.split('|');IDX.places.push({key:norm(a[0]),label:a[0]+' ('+a[1]+')',lat:+a[2],lng:+a[3]});});
+PROV.forEach(s=>{const a=s.split('|');IDX.provs.push({keys:[norm(a[0])].concat(a[3]?a[3].split(',').map(norm):[]),label:a[0],lat:+a[1],lng:+a[2]});});
+let PLC={};
+function findPlace(q){
+  const nq=norm(q);if(!nq)return null;
+  if(PLC[nq])return PLC[nq];
+  const pad=' '+nq+' ';let best=null;
+  for(const e of IDX.places){if(pad.indexOf(' '+e.key+' ')>=0&&(!best||e.key.length>best.key.length))best=e;}
+  if(best)return {lat:best.lat,lng:best.lng,label:best.label};
+  let bl=0;
+  for(const e of IDX.provs){for(const k of e.keys){if(pad.indexOf(' '+k+' ')>=0&&k.length>bl){bl=k.length;best=e;}}}
+  return best?{lat:best.lat,lng:best.lng,label:best.label}:null;
+}
+$('#places').innerHTML=PROV.map(s=>'<option value="'+esc(s.split('|')[0])+'">').join('')+PLACES.map(s=>{const a=s.split('|');return '<option value="'+esc(a[0]+', '+a[1])+'">';}).join('');
+
+/* ---------- dữ liệu: Google Sheets qua Apps Script ---------- */
+const PRODUCTS=['Viên nén bả điều','Viên nén gỗ','Dăm chip','Củi đòn','Trấu viên'];
+const DEF={rateKm:18000,truckTons:15,trips:1,loadKg:60,marginKg:100,factor:1.3};
+let sellers=[],cfg=Object.assign({},DEF),loaded=false,PIN='';
+const LS='nguonhang-pwa-v1';
+try{PIN=localStorage.getItem('nh-pin')||'';}catch(e){}
+function cacheSave(){try{localStorage.setItem(LS,JSON.stringify({sellers,cfg,places:PLC}));}catch(e){}}
+function cacheLoad(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(j){sellers=j.sellers||[];cfg=Object.assign({},DEF,j.cfg||{});PLC=Object.assign({},j.places||{});return true;}}catch(e){}return false;}
+function cleanSeller(s){
+  return {id:s.id,name:s.name||'',phone:s.phone||'',place:s.place||'',lat:s.lat!=null&&isFinite(s.lat)?Number(s.lat):null,lng:s.lng!=null&&isFinite(s.lng)?Number(s.lng):null,
+    note:s.note||'',items:(s.items||[]).filter(i=>i.product).map(i=>({product:i.product,price:Number(i.price)||0,date:i.date||today()})),demo:!!s.demo};
+}
+async function api(action,payload){
+  if(!API||API.indexOf('__API')===0)throw new Error('chưa cấu hình');
+  const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({k:PIN,action:action},payload||{}))});
+  const j=await r.json();
+  if(j.error==='unauthorized'){PIN='';try{localStorage.removeItem('nh-pin');}catch(e){}showLogin('Mã chưa đúng.');throw new Error('unauthorized');}
+  if(j.error)throw new Error(j.error);
+  return j;
+}
+function setSync(t){$('#sync').textContent=t||'';}
+async function loadAll(quiet){
+  if(!quiet)setSync('Đang tải...');
+  try{
+    const j=await api('list');
+    sellers=j.sellers||[];cfg=Object.assign({},DEF,j.config||{});PLC={};
+    (j.places||[]).forEach(p=>{if(p.q&&isFinite(p.lat)&&isFinite(p.lng))PLC[p.q]={lat:Number(p.lat),lng:Number(p.lng),label:p.label||p.q};});
+    loaded=true;cacheSave();$('#banner').innerHTML='';setSync('');renderAll();return true;
+  }catch(e){
+    setSync('');loaded=true;
+    if(String(e.message)!=='unauthorized')$('#banner').innerHTML='<div class="banner">Chưa kết nối được Google Sheets, đang hiện dữ liệu lưu lần trước. Sửa và lưu sẽ chưa được cho tới khi có mạng.</div>';
+    renderAll();return false;
+  }
+}
+async function saveSeller(s){
+  const c=cleanSeller(s);
+  await api('saveSeller',{seller:c});
+  const i=sellers.findIndex(x=>x.id===c.id);if(i>=0)sellers[i]=c;else sellers.push(c);
+  cacheSave();renderAll();
+}
+async function deleteSeller(id){await api('deleteSeller',{id:id});sellers=sellers.filter(x=>x.id!==id);cacheSave();renderAll();}
+let cfgTimer=null;
+function saveCfgSoon(){clearTimeout(cfgTimer);cfgTimer=setTimeout(async()=>{cacheSave();try{await api('saveConfig',{config:cfg});}catch(e){toast('Chưa lưu được cài đặt lên Sheets');}},700);}
+async function rememberPlace(text,r,src){
+  const k=norm(text);if(!k)return;
+  const label=text.trim()+' ('+(src||'bản đồ')+')';
+  PLC[k]={lat:r.lat,lng:r.lng,label};cacheSave();
+  try{await api('savePlace',{place:{q:k,label,lat:r.lat,lng:r.lng}});}catch(e){}
+}
+
+/* ---------- bản đồ: tìm vị trí và đường xe chạy (OpenStreetMap) ---------- */
+async function osmLocate(text){
+  try{
+    const u='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=vn&accept-language=vi&q='+encodeURIComponent(text+', Việt Nam');
+    const r=await fetch(u,{signal:AbortSignal.timeout(12000)});const j=await r.json();
+    if(j&&j[0]){const la=Number(j[0].lat),ln=Number(j[0].lon);if(la>=8&&la<=24.5&&ln>=102&&ln<=110)return {lat:la,lng:ln};}
+  }catch(e){}
+  return null;
+}
+async function roadKms(dest,list){
+  const out=new Array(list.length).fill(null);
+  for(let i=0;i<list.length;i+=60){
+    const chunk=list.slice(i,i+60);
+    const coords=[dest].concat(chunk).map(p=>p.lng.toFixed(5)+','+p.lat.toFixed(5)).join(';');
+    const u='https://router.project-osrm.org/table/v1/driving/'+coords+'?sources=0&annotations=distance';
+    const r=await fetch(u,{signal:AbortSignal.timeout(15000)});const j=await r.json();
+    if(j.code!=='Ok'||!j.distances)throw new Error('osrm');
+    j.distances[0].slice(1).forEach((m,k)=>{out[i+k]=m==null?null:Math.round(m/1000);});
+  }
+  return out;
+}
+
+/* ---------- tính giá ---------- */
+function quote(price,km,margin){
+  const trip=km*cfg.rateKm*cfg.trips;
+  const perKg=trip/(cfg.truckTons*1000);
+  const cost=price+perKg+cfg.loadKg;
+  const offer=Math.round((cost+margin)/10)*10;
+  return {trip,perKg,cost,offer};
+}
+function allProducts(){const set=new Set(PRODUCTS);sellers.forEach(s=>(s.items||[]).forEach(i=>i.product&&set.add(i.product)));return Array.from(set);}
+function located(s){return s.lat!=null&&s.lng!=null&&isFinite(s.lat)&&isFinite(s.lng);}
+
+const TABS=['find','sellers','set'];
+function showTab(t){TABS.forEach(x=>{$('#pane-'+x).hidden=x!==t;$('#tab-'+x).setAttribute('aria-selected',String(x===t));});}
+TABS.forEach(t=>$('#tab-'+t).onclick=()=>showTab(t));
+
+/* ---------- Tra giá ---------- */
+const QS={product:PRODUCTS[0],dest:null,destKey:'',sort:'km',open:null,ov:{},searched:false,road:{},roadOk:null};
+function fillProducts(){
+  const list=allProducts(),sel=$('#q-product'),cur=sel.value||QS.product;
+  sel.innerHTML=list.map(p=>'<option'+(p===cur?' selected':'')+'>'+esc(p)+'</option>').join('');
+  QS.product=sel.value;
+  $('#products').innerHTML=list.map(p=>'<option value="'+esc(p)+'">').join('');
+}
+async function resolveDest(){
+  const txt=$('#q-dest').value.trim(),st=$('#q-status');
+  if(!txt){st.className='status bad';st.textContent='Nhập nơi giao hàng.';return false;}
+  let f=findPlace(txt);
+  if(!f){
+    st.className='status';st.textContent='Địa danh này chưa có sẵn, đang tìm trên bản đồ...';
+    const r=await osmLocate(txt);
+    if(r){await rememberPlace(txt,r,'bản đồ');f=findPlace(txt);}
+  }
+  if(f){
+    QS.dest=f;QS.destKey=norm(txt);st.className='status ok';
+    st.innerHTML='Nơi giao: <b>'+esc(f.label)+'</b> · <a href="'+mapsLink(f.lat,f.lng)+'" target="_blank" rel="noopener">kiểm tra trên bản đồ</a>'+(/bản đồ\)$/.test(f.label)?'<div class="note">Vị trí lấy từ bản đồ OpenStreetMap, nên xem lại trước khi báo giá. Lần sau app nhớ địa danh này.</div>':'');
+    return true;
+  }
+  QS.dest=null;st.className='status bad';
+  st.innerHTML='Chưa nhận ra "<b>'+esc(txt)+'</b>". Gõ tên huyện hoặc tỉnh gần đó, hoặc ghi đủ "xã A, huyện B, tỉnh C".';
+  return false;
+}
+async function runSearch(skipResolve){
+  QS.product=$('#q-product').value;
+  const go=$('#q-go');go.disabled=true;
+  try{
+    if(!skipResolve&&!(await resolveDest())){QS.searched=false;renderResults();return;}
+    QS.searched=true;QS.open=null;QS.ov={};
+    const cand=sellers.filter(s=>located(s)&&(s.items||[]).some(i=>i.product===QS.product&&i.price>0));
+    const need=cand.filter(s=>QS.road[s.id+'|'+QS.destKey]==null);
+    QS.roadOk=true;
+    if(need.length){
+      const st=$('#q-status'),keep=st.innerHTML;
+      st.className='status';st.textContent='Đang tính đường xe chạy...';
+      try{
+        const kms=await roadKms(QS.dest,need);
+        need.forEach((s,i)=>{if(kms[i]!=null)QS.road[s.id+'|'+QS.destKey]=kms[i];});
+        st.className='status ok';st.innerHTML=keep;
+      }catch(e){QS.roadOk=false;st.className='status ok';st.innerHTML=keep;}
+    }
+    renderResults();
+  }finally{go.disabled=false;}
+}
+function rowFor(s){
+  const it=(s.items||[]).find(i=>i.product===QS.product&&i.price>0);
+  const ov=QS.ov[s.id]||{};
+  let km=null,src='';
+  if(located(s)&&QS.dest){
+    const rk=QS.road[s.id+'|'+QS.destKey];
+    if(rk!=null){km=rk;src='đường xe chạy';}
+    else{km=Math.round(hav(s.lat,s.lng,QS.dest.lat,QS.dest.lng)*cfg.factor);src='ước tính';}
+  }
+  if(ov.km!=null){km=ov.km;src='anh nhập';}
+  const margin=ov.margin!=null?ov.margin:cfg.marginKg;
+  const q=km!=null&&it?quote(it.price,km,margin):null;
+  return {s,it,km,src,q,margin,age:daysAgo(it&&it.date)};
+}
+function renderResults(){
+  const box=$('#results');
+  if(!loaded){box.innerHTML='<div class="card empty">Đang tải danh sách người bán...</div>';return;}
+  if(!sellers.length){
+    box.innerHTML='<div class="card empty"><b>Chưa có người bán nào</b>Vào mục "Người bán" để thêm, hoặc dán danh sách từ Excel.<div class="row" style="justify-content:center;margin-top:12px"><button class="btn primary" id="e-add">+ Thêm người bán</button></div></div>';
+    $('#e-add').onclick=()=>{showTab('sellers');openEditor();};return;
+  }
+  if(!QS.searched){box.innerHTML='<div class="card empty"><b>Nhập nơi giao rồi bấm Tìm</b>App sẽ liệt kê người bán có '+esc(QS.product.toLowerCase())+' theo khoảng cách tới nơi khách.</div>';return;}
+  let rows=sellers.filter(s=>(s.items||[]).some(i=>i.product===QS.product&&i.price>0)).map(rowFor);
+  const ok=rows.filter(r=>r.km!=null),bad=rows.filter(r=>r.km==null);
+  ok.sort((a,b)=>QS.sort==='km'?a.km-b.km:a.q.offer-b.q.offer);
+  document.querySelectorAll('#q-sort [data-sort]').forEach(b=>{b.className='btn small'+(b.dataset.sort===QS.sort?' primary':'');});
+  if(!rows.length){box.innerHTML='<div class="card empty"><b>Chưa có ai bán '+esc(QS.product)+'</b>Thêm loại hàng này cho người bán trong mục "Người bán".</div>';return;}
+  const tons=parseN($('#q-tons').value);
+  const est=ok.some(r=>r.src==='ước tính');
+  box.innerHTML='<div class="note">'+ok.length+' nguồn · '+esc(QS.product)+' → '+esc(QS.dest.label)+'.'+(est?' <b>Có nguồn đang ước tính km</b> (chưa lấy được đường xe chạy), bấm vào thẻ để chỉnh.':' Km theo đường xe chạy.')+'</div>'+ok.map(r=>cardHTML(r,tons)).join('')+
+    (bad.length?'<div class="card"><b>Chưa định vị được</b><div class="note">Các người bán này chưa có vị trí nên không tính được km: '+bad.map(r=>esc(r.s.name)).join(', ')+'. Vào mục "Người bán" bấm "Định vị người bán chưa có tọa độ".</div></div>':'');
+  box.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{QS.open=QS.open===b.dataset.open?null:b.dataset.open;renderResults();});
+  if(QS.open)wireDetail(QS.open);
+}
+function ageChip(age){if(age==null)return '';if(age>14)return '<span class="chip old">giá cũ '+age+' ngày</span>';return '<span class="chip">giá '+(age===0?'hôm nay':age+' ngày trước')+'</span>';}
+function cardHTML(r,tons){
+  const s=r.s,open=QS.open===s.id;
+  return '<div class="card res"><button class="res-head" data-open="'+esc(s.id)+'" aria-expanded="'+open+'">'+
+    '<div><div class="res-name">'+esc(s.name)+'</div><div class="res-meta">'+esc(s.place)+(s.phone?' · '+esc(s.phone):'')+'</div>'+
+    '<div>'+ageChip(r.age)+'<span class="chip am">mua '+fmt(r.it.price)+' đ/kg</span></div></div>'+
+    '<div class="right"><div class="km num" id="hk-'+esc(s.id)+'">'+(r.src==='ước tính'?'≈ ':'')+fmt(r.km)+'<small>km</small></div><div class="note" id="hs-'+esc(s.id)+'">'+esc(r.src)+'</div><div class="offer num" id="ho-'+esc(s.id)+'">giá giao '+fmt(r.q.offer)+' đ/kg</div></div></button>'+
+    (open?detailHTML(r,tons):'')+'</div>';
+}
+function calcHTML(r,tons){
+  const q=r.q,it=r.it;
+  const trips=tons?Math.ceil(tons/cfg.truckTons):0;
+  return '<table class="calc num">'+
+    '<tr><td>Giá mua tại nơi bán</td><td>'+fmt(it.price)+' đ/kg</td></tr>'+
+    '<tr><td>Cước xe: '+fmt(r.km)+' km × '+fmt(cfg.rateKm)+' đ'+(cfg.trips===2?' × 2':'')+' = '+fmt(q.trip)+' đ/chuyến<br><span class="note">chia '+fmt(cfg.truckTons)+' tấn/xe</span></td><td>'+fmt(q.perKg)+' đ/kg</td></tr>'+
+    '<tr><td>Bốc xếp</td><td>'+fmt(cfg.loadKg)+' đ/kg</td></tr>'+
+    '<tr><td>Giá vốn tới nơi khách</td><td>'+fmt(q.cost)+' đ/kg</td></tr>'+
+    '<tr><td>Lãi</td><td>'+fmt(r.margin)+' đ/kg</td></tr>'+
+    '<tr class="total"><td>Giá chào khách</td><td>'+fmt(q.offer)+' đ/kg<br>'+fmt(q.offer*1000)+' đ/tấn</td></tr>'+
+    (tons?'<tr><td>'+fmt(tons)+' tấn: tiền hàng<br><span class="note">'+trips+' chuyến xe</span></td><td>'+fmt(q.offer*tons*1000)+' đ<br><span class="note">lãi '+fmt(r.margin*tons*1000)+' đ</span></td></tr>':'')+
+    '</table>';
+}
+function quoteText(r,tons){
+  const lines=[QS.product+' giao '+QS.dest.label.replace(/ \((bản đồ)\)$/,'')+':',
+    'Giá '+fmt(r.q.offer)+' đ/kg ('+fmt(r.q.offer*1000)+' đ/tấn), đã gồm vận chuyển và bốc xếp.'];
+  if(tons)lines.push('Số lượng '+fmt(tons)+' tấn: '+fmt(r.q.offer*tons*1000)+' đ.');
+  return lines.join('\n');
+}
+function detailHTML(r,tons){
+  const s=r.s;
+  return '<div class="detail">'+
+    '<div class="grid2 keep"><label>Km đường xe chạy<input id="d-km" class="numfmt" inputmode="numeric" value="'+fmt(r.km)+'"></label>'+
+    '<label>Lãi (đ/kg)<input id="d-margin" class="numfmt" inputmode="numeric" value="'+fmt(r.margin)+'"></label></div>'+
+    '<div class="row"><a class="btn small" style="text-decoration:none" target="_blank" rel="noopener" href="'+mapsLink(s.lat,s.lng)+'">Xem nơi bốc</a>'+
+    '<a class="btn small" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&origin='+s.lat+','+s.lng+'&destination='+QS.dest.lat+','+QS.dest.lng+'">Xem đường đi</a></div>'+
+    '<div id="d-calc">'+calcHTML(r,tons)+'</div>'+
+    '<div class="quote" id="d-quote">'+esc(quoteText(r,tons))+'</div>'+
+    '<div class="row"><button class="btn primary small" id="d-copy">Sao chép tin báo giá</button><span class="note">Tin báo giá không có tên người bán.</span></div></div>';
+}
+function wireDetail(id){
+  const s=sellers.find(x=>x.id===id);if(!s)return;
+  const tons=parseN($('#q-tons').value);
+  const upd=()=>{
+    const ov=QS.ov[id]||(QS.ov[id]={});
+    ov.km=parseN($('#d-km').value);ov.margin=parseN($('#d-margin').value);
+    const r=rowFor(s);
+    $('#d-calc').innerHTML=calcHTML(r,tons);$('#d-quote').textContent=quoteText(r,tons);
+    $('#hk-'+id).innerHTML=fmt(r.km)+'<small>km</small>';$('#hs-'+id).textContent=r.src;$('#ho-'+id).textContent='giá giao '+fmt(r.q.offer)+' đ/kg';
+  };
+  $('#d-km').addEventListener('input',upd);$('#d-margin').addEventListener('input',upd);
+  $('#d-copy').onclick=async()=>{const t=$('#d-quote').textContent;try{await navigator.clipboard.writeText(t);toast('Đã sao chép');}catch(e){const rg=document.createRange();rg.selectNodeContents($('#d-quote'));const sel=getSelection();sel.removeAllRanges();sel.addRange(rg);toast('Hãy bấm giữ để sao chép');}};
+}
+$('#q-go').onclick=()=>runSearch();
+$('#q-dest').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();});
+$('#q-product').addEventListener('change',()=>{if(QS.searched)runSearch(true);});
+$('#q-tons').addEventListener('input',()=>{if(QS.searched)renderResults();});
+document.querySelectorAll('#q-sort [data-sort]').forEach(b=>b.onclick=()=>{QS.sort=b.dataset.sort;if(QS.searched)renderResults();else document.querySelectorAll('#q-sort [data-sort]').forEach(x=>x.className='btn small'+(x.dataset.sort===QS.sort?' primary':''));});
+
+document.addEventListener('input',e=>{
+  const t=e.target;
+  if(t&&t.classList&&t.classList.contains('numfmt')){
+    const pos=t.selectionStart,before=t.value.length;
+    const n=parseN(t.value);t.value=t.value.replace(/[^\d]/g,'')===''?'':fmt(n);
+    const after=t.value.length;try{t.setSelectionRange(pos+after-before,pos+after-before);}catch(_){}
+  }
+});
+
+/* ---------- Người bán ---------- */
+function sellerCard(s){
+  const items=(s.items||[]).map(i=>{const a=daysAgo(i.date);return '<span class="chip'+(a!=null&&a>14?' old':'')+'">'+esc(i.product)+' · '+fmt(i.price)+' đ/kg'+(a!=null&&a>14?' ('+a+' ngày)':'')+'</span>';}).join('');
+  return '<div class="card"><div class="row sp"><div style="min-width:0"><div class="res-name">'+esc(s.name)+(s.demo?' <span class="chip am">mẫu</span>':'')+'</div>'+
+    '<div class="res-meta">'+esc(s.place)+(s.phone?' · '+esc(s.phone):'')+(located(s)?'':' · <span style="color:var(--warn)">chưa định vị</span>')+'</div><div>'+items+'</div>'+(s.note?'<div class="note" style="margin-top:6px">'+esc(s.note)+'</div>':'')+'</div>'+
+    '<button class="btn small" data-edit="'+esc(s.id)+'">Sửa / cập nhật giá</button></div></div>';
+}
+function renderSellers(){
+  const q=norm($('#s-search').value),box=$('#s-list');
+  if(!loaded){box.innerHTML='<div class="card empty">Đang tải...</div>';return;}
+  let list=sellers.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi'));
+  if(q)list=list.filter(s=>norm([s.name,s.place,s.phone,(s.items||[]).map(i=>i.product).join(' ')].join(' ')).indexOf(q)>=0);
+  if(!sellers.length){box.innerHTML='<div class="card empty"><b>Chưa có người bán nào</b>Bấm "Thêm người bán" hoặc dán danh sách từ Excel.</div>';return;}
+  box.innerHTML=list.length?list.map(sellerCard).join(''):'<div class="card empty">Không có người bán khớp.</div>';
+  box.querySelectorAll('[data-edit]').forEach(b=>b.onclick=()=>openEditor(b.dataset.edit));
+}
+$('#s-search').addEventListener('input',renderSellers);
+$('#s-add').onclick=()=>openEditor();
+async function locateMissing(onProg){
+  const miss=sellers.filter(s=>!located(s)&&s.place);
+  const texts=Array.from(new Set(miss.map(s=>s.place.trim()))).slice(0,40);
+  let done=0;
+  for(const t of texts){
+    let f=findPlace(t);
+    if(!f){const r=await osmLocate(t);if(r){await rememberPlace(t,r,'bản đồ');f=findPlace(t);}await new Promise(r=>setTimeout(r,1100));}
+    if(f){for(const s of miss.filter(x=>x.place.trim()===t)){try{await saveSeller(Object.assign({},s,{lat:f.lat,lng:f.lng}));done++;}catch(e){}}}
+    if(onProg)onProg(done,miss.length);
+  }
+  return {done,total:miss.length};
+}
+$('#s-locate').onclick=async()=>{
+  const b=$('#s-locate');b.disabled=true;
+  try{const r=await locateMissing((d,t)=>{b.textContent='Đang định vị... '+d+'/'+t;});toast('Đã định vị '+r.done+'/'+r.total+' người bán');}catch(e){toast('Chưa định vị được');}
+  b.disabled=false;b.textContent='Định vị người bán chưa có tọa độ';
+};
+
+let ED=null;
+function openEditor(id){
+  const src=id?sellers.find(s=>s.id===id):null;
+  ED=src?JSON.parse(JSON.stringify(src)):{id:uid(),name:'',phone:'',place:'',lat:null,lng:null,note:'',items:[{product:QS.product||PRODUCTS[0],price:0,date:today()}]};
+  ED._orig=src?JSON.parse(JSON.stringify(src.items||[])):[];
+  $('#overlay').innerHTML='<div class="sheet-bg" id="ed-bg"><div class="sheet stack" role="dialog" aria-label="Người bán">'+
+    '<div class="row sp"><b style="font-size:17px">'+(src?'Sửa người bán':'Thêm người bán')+'</b><button class="btn small" id="ed-close">Đóng</button></div>'+
+    '<div class="grid2"><label>Tên người bán<input id="ed-name" value="'+esc(ED.name)+'"></label><label>Số điện thoại<input id="ed-phone" inputmode="tel" value="'+esc(ED.phone)+'"></label></div>'+
+    '<label>Nơi bốc hàng (xã, huyện, tỉnh)<input id="ed-place" list="places" autocomplete="off" value="'+esc(ED.place)+'" placeholder="vd: Bù Đăng, Bình Phước"></label>'+
+    '<div id="ed-loc" class="status"></div>'+
+    '<div class="grid2 keep"><label>Vĩ độ<input id="ed-lat" inputmode="decimal" value="'+(ED.lat==null?'':ED.lat)+'"></label><label>Kinh độ<input id="ed-lng" inputmode="decimal" value="'+(ED.lng==null?'':ED.lng)+'"></label></div>'+
+    '<div class="note">Vĩ độ, kinh độ tự điền khi tìm thấy địa danh. Có thể dán tọa độ chính xác từ Google Maps để km sát hơn.</div>'+
+    '<div><b>Loại hàng và giá hiện tại</b><div class="stack" id="ed-items" style="margin-top:8px"></div><div style="margin-top:8px"><button class="btn small" id="ed-additem">+ Thêm loại hàng</button></div></div>'+
+    '<label>Ghi chú (tải trọng xe vào được, giờ giao nhận, điều kiện thanh toán...)<textarea id="ed-note" style="min-height:70px">'+esc(ED.note)+'</textarea></label>'+
+    '<div class="row sp"><div>'+(src?'<button class="btn danger" id="ed-del">Xóa người bán</button>':'')+'</div><button class="btn primary" id="ed-save">Lưu</button></div>'+
+    '<div id="ed-err" class="status bad"></div></div></div>';
+  renderEdItems();updateEdLoc(true);
+  const close=()=>{$('#overlay').innerHTML='';ED=null;};
+  $('#ed-close').onclick=close;$('#ed-bg').addEventListener('mousedown',e=>{if(e.target.id==='ed-bg')close();});
+  $('#ed-place').addEventListener('input',()=>updateEdLoc(false));
+  $('#ed-place').addEventListener('change',async()=>{
+    const txt=$('#ed-place').value.trim();
+    if(!txt||findPlace(txt))return;
+    const st=$('#ed-loc');st.className='status';st.textContent='Địa danh này chưa có sẵn, đang tìm trên bản đồ...';
+    const r=await osmLocate(txt);
+    if(r){await rememberPlace(txt,r,'bản đồ');if(!$('#ed-place')||$('#ed-place').value.trim()!==txt)return;$('#ed-lat').value=r.lat;$('#ed-lng').value=r.lng;st.className='status ok';st.innerHTML='Tìm thấy trên bản đồ · <a href="'+mapsLink(r.lat,r.lng)+'" target="_blank" rel="noopener">kiểm tra</a>';}
+    else if($('#ed-place'))updateEdLoc(false);
+  });
+  $('#ed-additem').onclick=()=>{ED.items.push({product:'',price:0,date:today()});renderEdItems();};
+  const del=$('#ed-del');
+  if(del)del.onclick=async()=>{if(del.dataset.sure!=='1'){del.dataset.sure='1';del.textContent='Bấm lại để xóa hẳn';return;}try{await deleteSeller(ED.id);close();toast('Đã xóa');}catch(e){$('#ed-err').textContent='Chưa xóa được, kiểm tra mạng rồi thử lại.';}};
+  $('#ed-save').onclick=async()=>{
+    const name=$('#ed-name').value.trim();
+    if(!name){$('#ed-err').textContent='Nhập tên người bán.';return;}
+    const la=parseFloat(String($('#ed-lat').value).replace(',','.')),ln=parseFloat(String($('#ed-lng').value).replace(',','.'));
+    ED.name=name;ED.phone=$('#ed-phone').value.trim();ED.place=$('#ed-place').value.trim();ED.note=$('#ed-note').value.trim();
+    ED.lat=isFinite(la)?la:null;ED.lng=isFinite(ln)?ln:null;
+    ED.items=ED.items.filter(i=>i.product.trim());
+    ED.items.forEach(i=>{const o=(ED._orig||[]).find(x=>x.product===i.product);if(!o||o.price!==i.price)i.date=today();});
+    if(!ED.items.length){$('#ed-err').textContent='Thêm ít nhất một loại hàng và giá.';return;}
+    $('#ed-save').disabled=true;$('#ed-err').textContent='';
+    try{await saveSeller(ED);close();toast('Đã lưu vào Google Sheets');}catch(e){$('#ed-save').disabled=false;$('#ed-err').textContent='Chưa lưu được, kiểm tra mạng rồi thử lại.';}
+  };
+}
+function renderEdItems(){
+  const box=$('#ed-items');
+  box.innerHTML=ED.items.map((it,i)=>'<div class="item-row"><label>Loại hàng<input list="products" data-k="product" data-i="'+i+'" value="'+esc(it.product)+'"></label>'+
+    '<label>Giá (đ/kg)<input class="numfmt" inputmode="numeric" data-k="price" data-i="'+i+'" value="'+(it.price?fmt(it.price):'')+'"></label>'+
+    '<button class="btn small danger" data-rm="'+i+'" aria-label="Xóa dòng">Bỏ</button></div>').join('');
+  box.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{const it=ED.items[+inp.dataset.i];it[inp.dataset.k]=inp.dataset.k==='price'?parseN(inp.value):inp.value;}));
+  box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ED.items.splice(+b.dataset.rm,1);renderEdItems();});
+}
+function updateEdLoc(initial){
+  const st=$('#ed-loc'),txt=$('#ed-place').value.trim();
+  if(!txt){st.className='status';st.textContent='';return;}
+  const f=findPlace(txt);
+  if(f){
+    if(!initial||ED.lat==null){$('#ed-lat').value=f.lat;$('#ed-lng').value=f.lng;}
+    st.className='status ok';st.innerHTML='Nhận ra: <b>'+esc(f.label)+'</b> · <a href="'+mapsLink(f.lat,f.lng)+'" target="_blank" rel="noopener">xem bản đồ</a>';
+  }else{
+    st.className='status bad';st.innerHTML='Chưa có sẵn địa danh này. Rời khỏi ô để app tìm trên bản đồ, hoặc nhập tọa độ bên dưới.';
+  }
+}
+
+/* ---------- nhập / xuất ---------- */
+$('#s-import').onclick=()=>{
+  $('#overlay').innerHTML='<div class="sheet-bg" id="im-bg"><div class="sheet stack" role="dialog" aria-label="Nhập danh sách">'+
+    '<div class="row sp"><b style="font-size:17px">Dán danh sách người bán</b><button class="btn small" id="im-close">Đóng</button></div>'+
+    '<p class="note">Copy các cột từ Excel hoặc Google Sheets rồi dán vào đây. Thứ tự cột: <b>Tên | Số điện thoại | Nơi bốc | Loại hàng | Giá (đ/kg) | Ghi chú</b>. Mỗi loại hàng một dòng; cùng tên người bán sẽ gộp lại. Không dán dòng tiêu đề.</p>'+
+    '<textarea id="im-text" style="min-height:170px"></textarea>'+
+    '<div id="im-msg" class="status"></div><div class="row"><button class="btn primary" id="im-go">Nhập</button></div></div></div>';
+  const close=()=>{$('#overlay').innerHTML='';};
+  $('#im-close').onclick=close;$('#im-bg').addEventListener('mousedown',e=>{if(e.target.id==='im-bg')close();});
+  $('#im-go').onclick=async()=>{
+    const lines=$('#im-text').value.split(/\r?\n/).map(l=>l.split('\t')).filter(c=>c.length>=4&&c[0].trim());
+    if(!lines.length){$('#im-msg').className='status bad';$('#im-msg').textContent='Chưa thấy dòng nào đúng định dạng (cần ít nhất 4 cột, ngăn cách bằng Tab).';return;}
+    const map=new Map();
+    lines.forEach(c=>{
+      const name=c[0].trim(),key=norm(name);
+      let s=map.get(key);
+      if(!s){const old=sellers.find(x=>norm(x.name)===key);s=old?JSON.parse(JSON.stringify(old)):{id:uid(),name,phone:'',place:'',lat:null,lng:null,note:'',items:[]};map.set(key,s);}
+      if(c[1]&&c[1].trim())s.phone=c[1].trim();
+      if(c[2]&&c[2].trim()){s.place=c[2].trim();const f=findPlace(s.place);if(f&&(s.lat==null)){s.lat=f.lat;s.lng=f.lng;}}
+      const pr=c[3].trim(),price=parseN(c[4]);
+      if(pr){const ex=s.items.find(i=>i.product===pr);if(ex){if(price&&ex.price!==price){ex.price=price;ex.date=today();}}else s.items.push({product:pr,price,date:today()});}
+      if(c[5]&&c[5].trim())s.note=c[5].trim();
+    });
+    $('#im-go').disabled=true;let n=0,miss=0;
+    try{for(const s of map.values()){await saveSeller(s);n++;if(!located(s))miss++;}
+      close();toast('Đã nhập '+n+' người bán'+(miss?', '+miss+' chưa định vị':''));
+      if(miss){setTimeout(async()=>{try{const r=await locateMissing();toast('Đã định vị thêm '+r.done+'/'+r.total);}catch(e){}},400);}
+    }catch(e){$('#im-go').disabled=false;$('#im-msg').className='status bad';$('#im-msg').textContent='Nhập dở dang ('+n+' người), kiểm tra mạng rồi thử lại.';}
+  };
+};
+$('#s-export').onclick=()=>{
+  const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const rows=[['Tên','Số điện thoại','Nơi bốc','Vĩ độ','Kinh độ','Loại hàng','Giá (đ/kg)','Ngày cập nhật giá','Ghi chú']];
+  sellers.forEach(s=>(s.items&&s.items.length?s.items:[{}]).forEach(i=>rows.push([s.name,s.phone,s.place,s.lat,s.lng,i.product||'',i.price||'',i.date||'',s.note])));
+  const blob=new Blob(['﻿'+rows.map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='nguoi-ban-chat-dot.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+};
+$('#c-demo-clear').onclick=async()=>{const d=sellers.filter(s=>s.demo);if(!d.length){toast('Không có người bán mẫu');return;}try{for(const s of d)await deleteSeller(s.id);toast('Đã xóa '+d.length+' người bán mẫu');}catch(e){toast('Chưa xóa được');}};
+
+/* ---------- Cài đặt ---------- */
+const CF=[['rateKm','#c-rateKm'],['truckTons','#c-truckTons'],['loadKg','#c-loadKg'],['marginKg','#c-marginKg']];
+function fillCfg(force){
+  if(!force&&$('#pane-set').contains(document.activeElement))return;
+  CF.forEach(([k,sel])=>{$(sel).value=fmt(cfg[k]);});
+  $('#c-trips').value=String(cfg.trips);$('#c-factor').value=String(cfg.factor).replace('.',',');
+}
+CF.forEach(([k,sel])=>$(sel).addEventListener('input',()=>{cfg[k]=parseN($(sel).value);if(k==='truckTons'&&!cfg[k])cfg[k]=1;saveCfgSoon();if(QS.searched)renderResults();}));
+$('#c-trips').addEventListener('change',()=>{cfg.trips=Number($('#c-trips').value)||1;saveCfgSoon();if(QS.searched)renderResults();});
+$('#c-factor').addEventListener('input',()=>{const v=parseFloat($('#c-factor').value.replace(',','.'));if(v>=1&&v<=3){cfg.factor=v;saveCfgSoon();if(QS.searched)renderResults();}});
+$('#c-logout').onclick=()=>{PIN='';try{localStorage.removeItem('nh-pin');}catch(e){}showLogin('');};
+$('#refresh').onclick=()=>loadAll(false);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&PIN&&!$('#overlay').innerHTML)loadAll(true);});
+
+function renderAll(){fillProducts();renderResults();renderSellers();fillCfg(false);}
+
+/* ---------- đăng nhập bằng mã ---------- */
+function showLogin(msg){$('#login').hidden=false;$('#pin-msg').textContent=msg||'';$('#pin').value='';setTimeout(()=>$('#pin').focus(),50);}
+async function tryPin(){
+  const v=$('#pin').value.trim();if(!v)return;
+  PIN=v;$('#pin-go').disabled=true;$('#pin-msg').textContent='';
+  try{
+    const j=await api('list');
+    try{localStorage.setItem('nh-pin',PIN);}catch(e){}
+    $('#login').hidden=true;
+    sellers=j.sellers||[];cfg=Object.assign({},DEF,j.config||{});PLC={};
+    (j.places||[]).forEach(p=>{if(p.q&&isFinite(p.lat)&&isFinite(p.lng))PLC[p.q]={lat:Number(p.lat),lng:Number(p.lng),label:p.label||p.q};});
+    loaded=true;cacheSave();renderAll();
+  }catch(e){if(String(e.message)!=='unauthorized')$('#pin-msg').textContent='Chưa kết nối được. Kiểm tra mạng rồi thử lại.';}
+  $('#pin-go').disabled=false;
+}
+$('#pin-go').onclick=tryPin;
+$('#pin').addEventListener('keydown',e=>{if(e.key==='Enter')tryPin();});
+
+/* ---------- khởi động ---------- */
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
+(function init(){
+  if(cacheLoad())loaded=true;
+  renderAll();
+  if(!PIN){loaded=true;renderAll();showLogin('');return;}
+  loadAll(false);
+})();
+})();
+</script>
+</body>
+</html>
