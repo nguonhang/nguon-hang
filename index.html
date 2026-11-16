@@ -111,7 +111,7 @@ body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset
       <h1>Nguồn Hàng Chất Đốt</h1>
       <p class="sub">Tìm người bán gần nơi khách, tính cước và giá chào.</p>
     </div>
-    <div class="row"><span class="syncing" id="sync"></span><button class="btn small" id="refresh" title="Tải lại dữ liệu">Tải lại</button></div>
+    <div class="row"><span class="syncing" id="sync"></span><button class="btn small primary" id="install" hidden>Tải app về máy</button><button class="btn small" id="refresh" title="Tải lại dữ liệu">Tải lại</button></div>
   </div>
   <div id="banner"></div>
   <div class="tabs" role="tablist">
@@ -698,6 +698,15 @@ $('#c-trips').addEventListener('change',()=>{cfg.trips=Number($('#c-trips').valu
 $('#c-factor').addEventListener('input',()=>{const v=parseFloat($('#c-factor').value.replace(',','.'));if(v>=1&&v<=3){cfg.factor=v;saveCfgSoon();if(QS.searched)renderResults();}});
 $('#c-logout').onclick=()=>{PIN='';ME={admin:false};USERS=[];VIEWAS='';sellers=[];try{localStorage.removeItem('nh-pin');}catch(e){}renderAll();showLogin('');};
 $('#refresh').onclick=()=>loadAll(false);
+let DEFERRED=null;
+const standalone=window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();DEFERRED=e;if(!standalone)$('#install').hidden=false;});
+window.addEventListener('appinstalled',()=>{DEFERRED=null;$('#install').hidden=true;toast('Đã cài app. Anh tìm biểu tượng Nguồn Hàng trong menu Start hoặc màn hình chính.');});
+if(!standalone&&/iphone|ipad|ipod/i.test(navigator.userAgent))$('#install').hidden=false;
+$('#install').onclick=async()=>{
+  if(DEFERRED){DEFERRED.prompt();try{await DEFERRED.userChoice;}catch(e){}DEFERRED=null;$('#install').hidden=true;return;}
+  toast('iPhone: bấm nút Chia sẻ của Safari, chọn "Thêm vào Màn hình chính".');
+};
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&PIN&&!$('#overlay').innerHTML)loadAll(true);});
 
 function renderUsers(){
