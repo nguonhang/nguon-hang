@@ -737,13 +737,26 @@ $('#c-demo-clear').onclick=async()=>{const d=sellers.filter(s=>s.demo);if(!d.len
 
 /* ---------- Cài đặt ---------- */
 const CF=[['rateKm','#c-rateKm'],['loadKg','#c-loadKg'],['marginKg','#c-marginKg']];
-function fillProdCfg(){
+let EDITP=new Set();
+function prodHasCfg(p){return PK.some(([k])=>cfg['p|'+p+'|'+k]>0);}
+function renderProdCfg(){
   const box=$('#c-prods');if(!box)return;
-  box.innerHTML='<b>Cài đặt theo từng loại hàng</b><div class="note">Mỗi loại hàng một cước, một bốc xếp, một mức lãi riêng. Số tấn lấy từ ô Số tấn ở mục Tra giá. Ô để trống thì dùng số mặc định chung ở dưới.</div>'+
-    allProducts().map(p=>'<div class="stack" style="border-top:1px solid var(--line);padding-top:10px"><b>'+esc(p)+'</b><div class="grid2">'+
-      PK.map(([k,l])=>'<label>'+l+'<input class="numfmt" inputmode="numeric" data-pp="'+esc(p)+'" data-pk="'+k+'" value="'+(cfg['p|'+p+'|'+k]>0?fmt(cfg['p|'+p+'|'+k]):'')+'" placeholder="'+fmt(cfg[k])+' (chung)"></label>').join('')+'</div></div>').join('');
-  box.querySelectorAll('input').forEach(i=>i.addEventListener('input',()=>{cfg['p|'+i.dataset.pp+'|'+i.dataset.pk]=parseN(i.value);saveCfgSoon();if(QS.searched)renderResults();}));
+  box.innerHTML='<b>Cài đặt theo từng loại hàng</b><div class="note">Mỗi loại hàng một cước, một bốc xếp, một mức lãi riêng. Bấm Sửa để đổi số, đổi xong bấm Lưu. Ô để trống thì dùng số mặc định chung ở dưới.</div>'+
+    allProducts().map(p=>{const ed=EDITP.has(p)||!prodHasCfg(p);
+      return '<div class="stack" style="border-top:1px solid var(--line);padding-top:10px"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><b>'+esc(p)+'</b>'+
+      (ed?'<button class="btn primary" data-pact="save" data-pp="'+esc(p)+'">Lưu</button>':'<button class="btn" data-pact="edit" data-pp="'+esc(p)+'">Sửa</button>')+'</div><div class="grid2">'+
+      PK.map(([k,l])=>'<label>'+l+'<input class="numfmt" inputmode="numeric" '+(ed?'':'readonly style="opacity:.7" ')+'data-pp="'+esc(p)+'" data-pk="'+k+'" value="'+(cfg['p|'+p+'|'+k]>0?fmt(cfg['p|'+p+'|'+k]):'')+'" placeholder="'+fmt(cfg[k])+' (chung)"></label>').join('')+'</div></div>';}).join('');
+  box.querySelectorAll('input').forEach(i=>i.addEventListener('input',()=>{EDITP.add(i.dataset.pp);}));
+  box.querySelectorAll('[data-pact]').forEach(b=>b.addEventListener('click',async()=>{
+    const p=b.dataset.pp;
+    if(b.dataset.pact==='edit'){EDITP.add(p);renderProdCfg();return;}
+    box.querySelectorAll('input').forEach(i=>{if(i.dataset.pp===p)cfg['p|'+p+'|'+i.dataset.pk]=parseN(i.value);});
+    EDITP.delete(p);cacheSave();
+    try{await api('saveConfig',{config:cfg});toast('Đã lưu '+p);}catch(e){toast('Chưa lưu được lên Sheets, thử lại');EDITP.add(p);}
+    renderProdCfg();if(QS.searched)renderResults();
+  }));
 }
+function fillProdCfg(){if(EDITP.size)return;renderProdCfg();}
 function fillCfg(force){
   if(!force&&$('#pane-set').contains(document.activeElement))return;
   fillProdCfg();
