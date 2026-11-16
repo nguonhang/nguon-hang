@@ -178,9 +178,10 @@ body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset
       </div>
       <p class="note">Km lấy theo đường xe chạy từ bản đồ OpenStreetMap. Khi không có mạng hoặc bản đồ không trả lời, app tạm ước tính bằng đường chim bay nhân hệ số, trong thẻ có ghi rõ. Anh luôn gõ được km thật trong từng thẻ.</p>
     </div>
+    <div class="card stack" id="c-users" hidden></div>
     <div class="card stack">
       <b>Dữ liệu</b>
-      <div class="note">Người bán, giá và cài đặt lưu trong Google Sheets của anh (các tab NguoiBan, DiaDanh, CaiDat). Anh có thể sửa trực tiếp trong Sheets, bấm "Tải lại" trong app để thấy.</div>
+      <div class="note" id="c-data-note">Người bán, giá và cài đặt được lưu tự động trên mạng. Bấm "Tải lại" trong app để cập nhật.</div>
       <div class="row"><button class="btn small danger" id="c-demo-clear">Xóa người bán mẫu</button><button class="btn small" id="c-logout">Đổi mã truy cập</button></div>
     </div>
   </section>
@@ -263,30 +264,35 @@ const PRODUCTS=['Viên nén bả điều','Viên nén gỗ','Dăm chip','Củi �
 const DEF={rateKm:18000,truckTons:15,trips:1,loadKg:60,marginKg:100,factor:1.3,'p|Củi đòn|truckTons':20,'p|Viên nén bả điều|truckTons':40};
 const PK=[['truckTons','Xe thường dùng (tấn)'],['rateKm','Cước xe (đ/km)'],['loadKg','Bốc xếp (đ/kg)'],['marginKg','Lãi (đ/kg)']];
 function pc(p,k){const v=cfg['p|'+p+'|'+k];return v>0?v:cfg[k];}
-let sellers=[],cfg=Object.assign({},DEF),loaded=false,PIN='';
-const LS='nguonhang-pwa-v1';
+let sellers=[],cfg=Object.assign({},DEF),loaded=false,PIN='',ME={admin:false},USERS=[],VIEWAS='';
+function hsh(t){let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return (h>>>0).toString(36);}
+function LSK(){return 'nh-c-'+hsh(PIN+'|'+VIEWAS);}
 try{PIN=localStorage.getItem('nh-pin')||'';}catch(e){}
-function cacheSave(){try{localStorage.setItem(LS,JSON.stringify({sellers,cfg,places:PLC}));}catch(e){}}
-function cacheLoad(){try{const j=JSON.parse(localStorage.getItem(LS)||'null');if(j){sellers=j.sellers||[];cfg=Object.assign({},DEF,j.cfg||{});PLC=Object.assign({},j.places||{});return true;}}catch(e){}return false;}
+function cacheSave(){try{localStorage.setItem(LSK(),JSON.stringify({sellers,cfg,places:PLC}));}catch(e){}}
+function cacheLoad(){try{const j=JSON.parse(localStorage.getItem(LSK())||'null');if(j){sellers=j.sellers||[];cfg=Object.assign({},DEF,j.cfg||{});PLC=Object.assign({},j.places||{});return true;}}catch(e){}return false;}
 function cleanSeller(s){
   return {id:s.id,name:s.name||'',phone:s.phone||'',place:s.place||'',lat:s.lat!=null&&isFinite(s.lat)?Number(s.lat):null,lng:s.lng!=null&&isFinite(s.lng)?Number(s.lng):null,
     note:s.note||'',items:(s.items||[]).filter(i=>i.product).map(i=>({product:i.product,price:Number(i.price)||0,date:i.date||today()})),demo:!!s.demo};
 }
 async function api(action,payload){
   if(!API||API.indexOf('__API')===0)throw new Error('chưa cấu hình');
-  const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({k:PIN,action:action},payload||{}))});
+  const r=await fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({k:PIN,action:action,as:ME.admin?VIEWAS:undefined},payload||{}))});
   const j=await r.json();
   if(j.error==='unauthorized'){PIN='';try{localStorage.removeItem('nh-pin');}catch(e){}showLogin('Mã chưa đúng.');throw new Error('unauthorized');}
   if(j.error)throw new Error(j.error);
   return j;
 }
 function setSync(t){$('#sync').textContent=t||'';}
+function applyList(j){
+  sellers=j.sellers||[];cfg=Object.assign({},DEF,j.config||{});PLC={};
+  (j.places||[]).forEach(p=>{if(p.q&&isFinite(p.lat)&&isFinite(p.lng))PLC[p.q]={lat:Number(p.lat),lng:Number(p.lng),label:p.label||p.q};});
+  ME=j.me||{admin:false};USERS=j.users||[];
+}
 async function loadAll(quiet){
   if(!quiet)setSync('Đang tải...');
   try{
     const j=await api('list');
-    sellers=j.sellers||[];cfg=Object.assign({},DEF,j.config||{});PLC={};
-    (j.places||[]).forEach(p=>{if(p.q&&isFinite(p.lat)&&isFinite(p.lng))PLC[p.q]={lat:Number(p.lat),lng:Number(p.lng),label:p.label||p.q};});
+    applyList(j);
     loaded=true;cacheSave();$('#banner').innerHTML='';setSync('');renderAll();return true;
   }catch(e){
     setSync('');loaded=true;
@@ -689,11 +695,35 @@ function fillCfg(force){
 CF.forEach(([k,sel])=>$(sel).addEventListener('input',()=>{cfg[k]=parseN($(sel).value);if(k==='truckTons'&&!cfg[k])cfg[k]=1;saveCfgSoon();if(QS.searched)renderResults();}));
 $('#c-trips').addEventListener('change',()=>{cfg.trips=Number($('#c-trips').value)||1;saveCfgSoon();if(QS.searched)renderResults();});
 $('#c-factor').addEventListener('input',()=>{const v=parseFloat($('#c-factor').value.replace(',','.'));if(v>=1&&v<=3){cfg.factor=v;saveCfgSoon();if(QS.searched)renderResults();}});
-$('#c-logout').onclick=()=>{PIN='';try{localStorage.removeItem('nh-pin');}catch(e){}showLogin('');};
+$('#c-logout').onclick=()=>{PIN='';ME={admin:false};USERS=[];VIEWAS='';sellers=[];try{localStorage.removeItem('nh-pin');}catch(e){}renderAll();showLogin('');};
 $('#refresh').onclick=()=>loadAll(false);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&PIN&&!$('#overlay').innerHTML)loadAll(true);});
 
-function renderAll(){fillProducts();renderResults();renderSellers();fillCfg(false);}
+function renderUsers(){
+  const box=$('#c-users');if(!box)return;
+  const foot=$('#c-demo-clear');
+  if(!ME.admin){box.hidden=true;box.innerHTML='';$('#banner').innerHTML&&0;return;}
+  if($('#c-users').contains(document.activeElement)&&document.activeElement.tagName==='INPUT')return;
+  box.hidden=false;
+  box.innerHTML='<b>Người dùng và mã truy cập</b><div class="note">Mỗi người có một mã riêng, chỉ thấy và lưu khách của riêng họ. Anh xem được dữ liệu của tất cả.</div>'+
+   '<div class="note">Đang xem dữ liệu của:</div><div class="row"><button class="btn small'+(VIEWAS===''?' primary':'')+'" data-v="">Của tôi</button>'+USERS.map(u=>'<button class="btn small'+(VIEWAS===u.id?' primary':'')+'" data-v="'+esc(u.id)+'">'+esc(u.name)+'</button>').join('')+'</div>'+
+   USERS.map(u=>'<div class="row" style="border-top:1px solid var(--line);padding-top:8px"><b style="min-width:90px">'+esc(u.name)+'</b><input style="flex:1;min-width:90px" data-pinfor="'+esc(u.id)+'" value="'+esc(u.pin)+'"><button class="btn small" data-savepin="'+esc(u.id)+'">Lưu mã</button><button class="btn small danger" data-deluser="'+esc(u.id)+'">Xóa</button></div>').join('')+
+   '<div class="grid2 keep" style="border-top:1px solid var(--line);padding-top:10px"><label>Tên người dùng<input id="u-name" autocomplete="off"></label><label>Mã truy cập (ít nhất 4 ký tự)<input id="u-pin" autocomplete="off"></label></div>'+
+   '<div class="row"><button class="btn small primary" id="u-add">+ Thêm người dùng</button></div><div id="u-err" class="status bad"></div>';
+  box.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{VIEWAS=b.dataset.v;sellers=[];loaded=false;cacheLoad();renderAll();loadAll(false);});
+  const setU=r=>{USERS=r.users||[];renderUsers();};
+  const err=m=>{$('#u-err').textContent=m;};
+  $('#u-add').onclick=async()=>{const name=$('#u-name').value.trim(),pin=$('#u-pin').value.trim();if(!name)return err('Nhập tên người dùng.');if(pin.length<4)return err('Mã cần ít nhất 4 ký tự.');
+    try{setU(await api('saveUser',{user:{name,pin}}));toast('Đã thêm');}catch(e){err(String(e.message).indexOf('trùng')>=0?'Mã này đã có người dùng, chọn mã khác.':'Chưa lưu được, thử lại.');}};
+  box.querySelectorAll('[data-savepin]').forEach(b=>b.onclick=async()=>{const id=b.dataset.savepin,u=USERS.find(x=>x.id===id),pin=box.querySelector('[data-pinfor="'+id+'"]').value.trim();
+    if(pin.length<4)return err('Mã cần ít nhất 4 ký tự.');try{setU(await api('saveUser',{user:{id,name:u.name,pin}}));toast('Đã đổi mã');}catch(e){err(String(e.message).indexOf('trùng')>=0?'Mã này đã có người dùng, chọn mã khác.':'Chưa lưu được, thử lại.');}});
+  box.querySelectorAll('[data-deluser]').forEach(b=>b.onclick=async()=>{if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Bấm lại để xóa';return;}
+    try{const id=b.dataset.deluser;const r=await api('deleteUser',{id});if(VIEWAS===id)VIEWAS='';setU(r);toast('Đã xóa mã truy cập (dữ liệu vẫn giữ trong Sheet)');}catch(e){err('Chưa xóa được.');}});
+}
+function renderAll(){fillProducts();renderResults();renderSellers();fillCfg(false);renderUsers();
+  const bn=$('#banner');if(ME.admin&&VIEWAS){const u=USERS.find(x=>x.id===VIEWAS);bn.innerHTML='<div class="banner">Đang xem dữ liệu của: '+esc(u?u.name:VIEWAS)+'. Mọi thay đổi sẽ lưu vào dữ liệu của người này.</div>';}
+  const dn=$('#c-data-note');if(dn)dn.textContent=ME.admin?'Người bán, giá và cài đặt lưu trong Google Sheets của anh (các tab NguoiBan, DiaDanh, CaiDat, NguoiDung). Anh có thể sửa trực tiếp trong Sheets, bấm "Tải lại" trong app để thấy.':'Người bán, giá và cài đặt được lưu tự động trên mạng. Bấm "Tải lại" trong app để cập nhật.';
+  const dc=$('#c-demo-clear');if(dc)dc.hidden=!ME.admin;}
 
 /* ---------- đăng nhập bằng mã ---------- */
 function showLogin(msg){$('#login').hidden=false;$('#pin-msg').textContent=msg||'';$('#pin').value='';setTimeout(()=>$('#pin').focus(),50);}
@@ -704,8 +734,7 @@ async function tryPin(){
     const j=await api('list');
     try{localStorage.setItem('nh-pin',PIN);}catch(e){}
     $('#login').hidden=true;
-    sellers=j.sellers||[];cfg=Object.assign({},DEF,j.config||{});PLC={};
-    (j.places||[]).forEach(p=>{if(p.q&&isFinite(p.lat)&&isFinite(p.lng))PLC[p.q]={lat:Number(p.lat),lng:Number(p.lng),label:p.label||p.q};});
+    applyList(j);
     loaded=true;cacheSave();renderAll();
   }catch(e){if(String(e.message)!=='unauthorized')$('#pin-msg').textContent='Chưa kết nối được. Kiểm tra mạng rồi thử lại.';}
   $('#pin-go').disabled=false;
