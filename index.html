@@ -537,7 +537,7 @@ function openEditor(id){
     '<label>Nơi bốc hàng (xã, huyện, tỉnh)<input id="ed-place" list="places" autocomplete="off" value="'+esc(ED.place)+'" placeholder="vd: Bù Đăng, Bình Phước"></label>'+
     '<div id="ed-loc" class="status"></div>'+
     '<div class="grid2 keep"><label>Vĩ độ<input id="ed-lat" inputmode="decimal" value="'+(ED.lat==null?'':ED.lat)+'"></label><label>Kinh độ<input id="ed-lng" inputmode="decimal" value="'+(ED.lng==null?'':ED.lng)+'"></label></div>'+
-    '<div class="note">Vĩ độ, kinh độ tự điền khi tìm thấy địa danh. Có thể dán tọa độ chính xác từ Google Maps để km sát hơn.</div>'+
+    '<div class="note">Vĩ độ, kinh độ tự điền khi tìm thấy địa danh. Để km sát hơn: mở Google Maps, chọn đúng chỗ bốc, <b>sao chép link hoặc toạ độ</b> rồi dán vào ô Vĩ độ hoặc ô Nơi bốc, app tự tách.</div>'+
     '<div><b>Loại hàng và giá hiện tại</b><div class="stack" id="ed-items" style="margin-top:8px"></div><div style="margin-top:8px"><button class="btn small" id="ed-additem">+ Thêm loại hàng</button></div></div>'+
     '<label>Ghi chú (tải trọng xe vào được, giờ giao nhận, điều kiện thanh toán...)<textarea id="ed-note" style="min-height:70px">'+esc(ED.note)+'</textarea></label>'+
     '<div class="row sp"><div>'+(src?'<button class="btn danger" id="ed-del">Xóa người bán</button>':'')+'</div><button class="btn primary" id="ed-save">Lưu</button></div>'+
@@ -545,6 +545,15 @@ function openEditor(id){
   renderEdItems();updateEdLoc(true);
   const close=()=>{$('#overlay').innerHTML='';ED=null;};
   $('#ed-close').onclick=close;$('#ed-bg').addEventListener('mousedown',e=>{if(e.target.id==='ed-bg')close();});
+  const tryMaps=(el)=>{
+    const raw=el.value.trim();
+    if(!raw||!/(https?:|maps|goo\.gl|^-?\d+[.,]\d+\s*[,; ]\s*-?\d+[.,]\d+)/i.test(raw))return false;
+    const st=$('#ed-loc');
+    const c=parseMapsInput(raw);
+    if(c){$('#ed-lat').value=c.lat;$('#ed-lng').value=c.lng;if(el.id!=='ed-place'||true){if(el.id!=='ed-lat')el.value=el.id==='ed-lng'?c.lng:el.value;}if(el.id==='ed-lat')el.value=c.lat;if(el.id==='ed-place')el.value='';st.className='status ok';st.innerHTML='Đã lấy toạ độ từ Google Maps · <a href="'+mapsLink(c.lat,c.lng)+'" target="_blank" rel="noopener">kiểm tra</a>'+(el.id==='ed-place'?'. Nhớ gõ tên tỉnh/huyện vào ô Nơi bốc để dễ tìm.':'');return true;}
+    if(/goo\.gl|maps\.app/i.test(raw)){st.className='status bad';st.textContent='Link rút gọn chưa đọc được. Trong Google Maps, nhấn giữ vào điểm rồi sao chép dòng số toạ độ (vd 11.75, 106.72) dán vào ô Vĩ độ.';return true;}
+    return false;};
+  ['ed-lat','ed-lng','ed-place'].forEach(id=>{$('#'+id).addEventListener('paste',()=>setTimeout(()=>tryMaps($('#'+id)),0));$('#'+id).addEventListener('change',()=>tryMaps($('#'+id)));});
   $('#ed-place').addEventListener('input',()=>updateEdLoc(false));
   $('#ed-place').addEventListener('change',async()=>{
     const txt=$('#ed-place').value.trim();
@@ -577,6 +586,15 @@ function renderEdItems(){
     '<button class="btn small danger" data-rm="'+i+'" aria-label="Xóa dòng">Bỏ</button></div>').join('');
   box.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{const it=ED.items[+inp.dataset.i];it[inp.dataset.k]=inp.dataset.k==='price'?parseN(inp.value):inp.value;}));
   box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ED.items.splice(+b.dataset.rm,1);renderEdItems();});
+}
+function parseMapsInput(t){
+  t=String(t).trim();let m;
+  const ok=(la,ln)=>{la=+la;ln=+ln;return la>=8&&la<=24.5&&ln>=102&&ln<=110?{lat:la,lng:ln}:null;};
+  if((m=t.match(/!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)/)))return ok(m[1],m[2]);
+  if((m=t.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/)))return ok(m[1],m[2]);
+  if((m=t.match(/[?&](?:q|ll|query|destination)=(-?\d+\.?\d*)(?:,|%2C)\s*(-?\d+\.?\d*)/i)))return ok(m[1],m[2]);
+  if((m=t.match(/^(-?\d+[.,]\d+)\s*[,; ]\s*(-?\d+[.,]\d+)$/)))return ok(m[1].replace(',','.'),m[2].replace(',','.'));
+  return null;
 }
 function updateEdLoc(initial){
   const st=$('#ed-loc'),txt=$('#ed-place').value.trim();
