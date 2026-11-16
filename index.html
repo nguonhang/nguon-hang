@@ -440,6 +440,10 @@ function freightLine(r){
   const kg=r.q.loadKg,pk=r.q.perKg;
   return '<div class="note num" style="margin-top:6px">Cước xe '+fmt(r.km)+' km'+(cfg.trips===2?' (khứ hồi)':'')+': <b>'+fmt(kg)+' kg × '+fmt1(pk)+' đ/kg = '+fmt(r.q.trip)+' đ</b></div>';
 }
+function loadLine(r){
+  const u=pc(QS.product,'loadKg');
+  return '<div class="note num" style="margin-top:4px">Bốc xếp xuống hàng: <b>'+fmt(r.q.loadKg)+' kg × '+fmt1(u)+' đ/kg = '+fmt(Math.round(r.q.loadKg*u))+' đ</b></div>';
+}
 function profitLine(r,tons){
   if(!tons)return '';const kg=tons*1000;
   return '<div class="note num" style="margin-top:4px">Chở '+fmt(tons)+' tấn: khách trả <b>'+fmt(r.q.offer*kg)+' đ</b> · <b style="color:var(--accent,#1d6a45)">lãi '+fmt1(r.q.offer-r.q.cost)+' đ/kg × '+fmt(kg)+' kg = '+fmt(Math.round((r.q.offer-r.q.cost)*kg))+' đ</b></div>';
@@ -448,7 +452,7 @@ function cardHTML(r,tons){
   const s=r.s,open=QS.open===s.id;
   return '<div class="card res"><button class="res-head" data-open="'+esc(s.id)+'" aria-expanded="'+open+'">'+
     '<div><div class="res-name">'+esc(s.name)+'</div><div class="res-meta">'+esc(s.place)+(s.phone?' · '+esc(s.phone):'')+'</div>'+
-    '<div>'+ageChip(r.age)+'<span class="chip am">mua '+fmt(r.it.price)+' đ/kg</span></div>'+freightLine(r)+profitLine(r,tons)+'</div>'+
+    '<div>'+ageChip(r.age)+'<span class="chip am">mua '+fmt(r.it.price)+' đ/kg</span></div>'+freightLine(r)+loadLine(r)+profitLine(r,tons)+'</div>'+
     '<div class="right"><div class="km num" id="hk-'+esc(s.id)+'">'+(r.src==='ước tính'?'≈ ':'')+fmt(r.km)+'<small>km</small></div><div class="note" id="hs-'+esc(s.id)+'">'+esc(r.src)+'</div><div class="offer num" id="ho-'+esc(s.id)+'">giá giao '+fmt(r.q.offer)+' đ/kg</div></div></button>'+
     (open?detailHTML(r,tons):'')+'</div>';
 }
@@ -458,7 +462,7 @@ function calcHTML(r,tons){
   return '<table class="calc num">'+
     '<tr><td>Giá mua tại nơi bán</td><td>'+fmt(it.price)+' đ/kg</td></tr>'+
     '<tr><td>Cước xe: '+fmt(r.km)+' km × '+fmt(pc(QS.product,'rateKm'))+' đ'+(cfg.trips===2?' × 2':'')+' = '+fmt(q.trip)+' đ/chuyến<br><span class="note">'+fmt(q.loadKg)+' kg × '+fmt1(q.perKg)+' đ/kg = '+fmt(q.trip)+' đ</span></td><td>'+fmt1(q.perKg)+' đ/kg</td></tr>'+
-    '<tr><td>Bốc xếp</td><td>'+fmt(pc(QS.product,'loadKg'))+' đ/kg</td></tr>'+
+    '<tr><td>Bốc xếp xuống hàng</td><td>'+fmt(pc(QS.product,'loadKg'))+' đ/kg</td></tr>'+
     '<tr><td>Giá vốn tới nơi khách</td><td>'+fmt(q.cost)+' đ/kg</td></tr>'+
     '<tr><td>Lãi</td><td>'+fmt(r.margin)+' đ/kg</td></tr>'+
     '<tr class="total"><td>Giá chào khách</td><td>'+fmt(q.offer)+' đ/kg<br>'+fmt(q.offer*1000)+' đ/tấn</td></tr>'+
