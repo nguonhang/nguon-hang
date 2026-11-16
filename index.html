@@ -265,28 +265,50 @@ const acBox=document.createElement('div');acBox.id='acbox';
 acBox.style.cssText='position:fixed;z-index:99999;background:#fff;color:#111;border:1px solid #bbb;border-radius:10px;box-shadow:0 6px 20px rgba(0,0,0,.25);max-height:260px;overflow:auto;display:none;font-size:16px';
 document.body.appendChild(acBox);
 let acIn=null,acSel=-1;
-function acHide(){acBox.style.display='none';acSel=-1;}
+function acHide(){acBox.style.display='none';acSel=-1;acSeq++;}
+let acTimer=null,acSeq=0,acLocal=[];
+function acRender(inp,online){
+  const b=inp.getBoundingClientRect();
+  let h=acLocal.map(e=>'<div data-v="'+esc(e.l)+'" style="padding:10px 12px;border-bottom:1px solid #eee;cursor:pointer">'+esc(e.l)+'</div>').join('');
+  if(online&&online.length)h+='<div style="padding:4px 12px;font-size:12px;color:#666;background:#f3f4f6">Tìm thấy trên bản đồ</div>'+online.map(e=>'<div data-v="'+esc(e.l)+'" data-lat="'+e.lat+'" data-lng="'+e.lng+'" style="padding:10px 12px;border-bottom:1px solid #eee;cursor:pointer">'+esc(e.l)+'</div>').join('');
+  if(!h){acHide();return;}
+  acBox.innerHTML=h;acSel=-1;
+  acBox.style.left=b.left+'px';acBox.style.top=(b.bottom+2)+'px';acBox.style.width=b.width+'px';acBox.style.display='block';
+}
+async function acOnline(inp,txt,seq){
+  try{
+    const u='https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&countrycodes=vn&accept-language=vi&q='+encodeURIComponent(txt);
+    const r=await fetch(u,{signal:AbortSignal.timeout(8000)});const j=await r.json();
+    if(seq!==acSeq||acIn!==inp)return;
+    const seen={};acLocal.forEach(e=>seen[e.k]=1);
+    const out=[];
+    (j||[]).forEach(x=>{
+      const la=Number(x.lat),ln=Number(x.lon);if(!(la>=8&&la<=24.5&&ln>=102&&ln<=110))return;
+      const l=String(x.display_name||'').split(',').map(t=>t.trim()).filter(t=>t&&!/^\d+$/.test(t)&&t!=='Việt Nam').slice(0,4).join(', ');
+      const k=norm(l);if(!l||seen[k])return;seen[k]=1;out.push({l:l,lat:la,lng:ln});
+    });
+    if(out.length)acRender(inp,out);
+  }catch(e){}
+}
 function acShow(inp){
-  const nq=norm(inp.value);if(!nq){acHide();return;}
+  const nq=norm(inp.value);clearTimeout(acTimer);if(!nq){acHide();return;}
   const ws=nq.split(' ').filter(Boolean);
   let r=ACL.filter(e=>ws.every(w=>e.k.indexOf(w)>=0));
   r.sort((a,b)=>(b.k.indexOf(nq)===0)-(a.k.indexOf(nq)===0)||a.l.length-b.l.length);
-  r=r.slice(0,8);
-  if(!r.length||(r.length===1&&norm(r[0].l)===nq)){acHide();return;}
-  acIn=inp;acSel=-1;
-  acBox.innerHTML=r.map((e,i)=>'<div data-v="'+esc(e.l)+'" style="padding:10px 12px;border-bottom:1px solid #eee;cursor:pointer">'+esc(e.l)+'</div>').join('');
-  const b=inp.getBoundingClientRect();
-  acBox.style.left=b.left+'px';acBox.style.top=(b.bottom+2)+'px';acBox.style.width=b.width+'px';acBox.style.display='block';
+  acLocal=r.slice(0,6);acIn=inp;
+  if(acLocal.length===1&&norm(acLocal[0].l)===nq)acLocal=[];
+  acRender(inp,null);
+  if(nq.length>=3){const seq=++acSeq;acTimer=setTimeout(()=>acOnline(inp,inp.value.trim(),seq),600);}
 }
-function acPick(v){if(!acIn)return;acIn.value=v;acHide();acIn.dispatchEvent(new Event('input',{bubbles:true}));acIn.dispatchEvent(new Event('change',{bubbles:true}));acIn.blur();}
+function acPick(v,la,ln){if(!acIn)return;if(la&&ln){PLC[norm(v)]={lat:+la,lng:+ln,label:v};try{cacheSave();}catch(e){}}acIn.value=v;acHide();acIn.dispatchEvent(new Event('input',{bubbles:true}));acIn.dispatchEvent(new Event('change',{bubbles:true}));acIn.blur();}
 document.addEventListener('input',e=>{if(e.target.dataset&&e.target.dataset.ac)acShow(e.target);});
 document.addEventListener('focusin',e=>{if(e.target.dataset&&e.target.dataset.ac&&e.target.value)acShow(e.target);});
-document.addEventListener('mousedown',e=>{const d=e.target.closest&&e.target.closest('#acbox [data-v]');if(d){e.preventDefault();acPick(d.dataset.v);}else if(!(e.target.dataset&&e.target.dataset.ac))acHide();});
+document.addEventListener('mousedown',e=>{const d=e.target.closest&&e.target.closest('#acbox [data-v]');if(d){e.preventDefault();acPick(d.dataset.v,d.dataset.lat,d.dataset.lng);}else if(!(e.target.dataset&&e.target.dataset.ac))acHide();});
 document.addEventListener('keydown',e=>{
   if(acBox.style.display==='none'||!e.target.dataset||!e.target.dataset.ac)return;
   const it=acBox.children;
   if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();acSel=(acSel+(e.key==='ArrowDown'?1:-1)+it.length)%it.length;[...it].forEach((x,i)=>x.style.background=i===acSel?'#dbeafe':'');}
-  else if(e.key==='Enter'&&acSel>=0){e.preventDefault();acPick(it[acSel].dataset.v);}
+  else if(e.key==='Enter'&&acSel>=0){e.preventDefault();acPick(it[acSel].dataset.v,it[acSel].dataset.lat,it[acSel].dataset.lng);}
   else if(e.key==='Escape')acHide();
 });
 window.addEventListener('scroll',acHide,true);
