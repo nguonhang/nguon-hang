@@ -563,7 +563,7 @@ function openEditor(id){
     if(r){await rememberPlace(txt,r,'bản đồ');if(!$('#ed-place')||$('#ed-place').value.trim()!==txt)return;$('#ed-lat').value=r.lat;$('#ed-lng').value=r.lng;st.className='status ok';st.innerHTML='Tìm thấy trên bản đồ · <a href="'+mapsLink(r.lat,r.lng)+'" target="_blank" rel="noopener">kiểm tra</a>';}
     else if($('#ed-place'))updateEdLoc(false);
   });
-  $('#ed-additem').onclick=()=>{ED.items.push({product:'',price:0,date:today()});renderEdItems();};
+  $('#ed-additem').onclick=()=>{ED.items.push({product:PRODUCTS[0],price:0,date:today()});renderEdItems();};
   const del=$('#ed-del');
   if(del)del.onclick=async()=>{if(del.dataset.sure!=='1'){del.dataset.sure='1';del.textContent='Bấm lại để xóa hẳn';return;}try{await deleteSeller(ED.id);close();toast('Đã xóa');}catch(e){$('#ed-err').textContent='Chưa xóa được, kiểm tra mạng rồi thử lại.';}};
   $('#ed-save').onclick=async()=>{
@@ -572,7 +572,7 @@ function openEditor(id){
     const la=parseFloat(String($('#ed-lat').value).replace(',','.')),ln=parseFloat(String($('#ed-lng').value).replace(',','.'));
     ED.name=name;ED.phone=$('#ed-phone').value.trim();ED.place=$('#ed-place').value.trim();ED.note=$('#ed-note').value.trim();
     ED.lat=isFinite(la)?la:null;ED.lng=isFinite(ln)?ln:null;
-    ED.items=ED.items.filter(i=>i.product.trim());
+    {const n=ED.items.length;ED.items=ED.items.filter(i=>i.product.trim()&&(i.price>0||n===1));}
     ED.items.forEach(i=>{const o=(ED._orig||[]).find(x=>x.product===i.product);if(!o||o.price!==i.price)i.date=today();});
     if(!ED.items.length){$('#ed-err').textContent='Thêm ít nhất một loại hàng và giá.';return;}
     $('#ed-save').disabled=true;$('#ed-err').textContent='';
@@ -581,10 +581,10 @@ function openEditor(id){
 }
 function renderEdItems(){
   const box=$('#ed-items');
-  box.innerHTML=ED.items.map((it,i)=>'<div class="item-row"><label>Loại hàng<input list="products" data-k="product" data-i="'+i+'" value="'+esc(it.product)+'"></label>'+
+  box.innerHTML=ED.items.map((it,i)=>'<div class="item-row"><label>Loại hàng<select data-k="product" data-i="'+i+'">'+(PRODUCTS.indexOf(it.product)<0&&it.product?'<option selected>'+esc(it.product)+'</option>':'')+PRODUCTS.map(p=>'<option'+(p===it.product?' selected':'')+'>'+esc(p)+'</option>').join('')+'</select></label>'+
     '<label>Giá (đ/kg)<input class="numfmt" inputmode="numeric" data-k="price" data-i="'+i+'" value="'+(it.price?fmt(it.price):'')+'"></label>'+
     '<button class="btn small danger" data-rm="'+i+'" aria-label="Xóa dòng">Bỏ</button></div>').join('');
-  box.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',()=>{const it=ED.items[+inp.dataset.i];it[inp.dataset.k]=inp.dataset.k==='price'?parseN(inp.value):inp.value;}));
+  box.querySelectorAll('input,select').forEach(inp=>inp.addEventListener('input',()=>{const it=ED.items[+inp.dataset.i];it[inp.dataset.k]=inp.dataset.k==='price'?parseN(inp.value):inp.value;}));
   box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ED.items.splice(+b.dataset.rm,1);renderEdItems();});
 }
 function parseMapsInput(t){
