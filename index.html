@@ -268,6 +268,7 @@ let sellers=[],cfg=Object.assign({},DEF),loaded=false,PIN='',ME={admin:false},US
 function hsh(t){let h=5381;for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))|0;return (h>>>0).toString(36);}
 function LSK(){return 'nh-c-'+hsh(PIN+'|'+VIEWAS);}
 try{PIN=localStorage.getItem('nh-pin')||'';}catch(e){}
+try{const q=new URLSearchParams(location.search).get('k');if(q){PIN=q.trim();try{localStorage.setItem('nh-pin',PIN);}catch(e){}history.replaceState(null,'',location.pathname);}}catch(e){}
 function cacheSave(){try{localStorage.setItem(LSK(),JSON.stringify({sellers,cfg,places:PLC}));}catch(e){}}
 function cacheLoad(){try{const j=JSON.parse(localStorage.getItem(LSK())||'null');if(j){sellers=j.sellers||[];cfg=Object.assign({},DEF,j.cfg||{});PLC=Object.assign({},j.places||{});return true;}}catch(e){}return false;}
 function cleanSeller(s){
@@ -707,7 +708,7 @@ function renderUsers(){
   box.hidden=false;
   box.innerHTML='<b>Người dùng và mã truy cập</b><div class="note">Mỗi người có một mã riêng, chỉ thấy và lưu khách của riêng họ. Anh xem được dữ liệu của tất cả.</div>'+
    '<div class="note">Đang xem dữ liệu của:</div><div class="row"><button class="btn small'+(VIEWAS===''?' primary':'')+'" data-v="">Của tôi</button>'+USERS.map(u=>'<button class="btn small'+(VIEWAS===u.id?' primary':'')+'" data-v="'+esc(u.id)+'">'+esc(u.name)+'</button>').join('')+'</div>'+
-   USERS.map(u=>'<div class="row" style="border-top:1px solid var(--line);padding-top:8px"><b style="min-width:90px">'+esc(u.name)+'</b><input style="flex:1;min-width:90px" data-pinfor="'+esc(u.id)+'" value="'+esc(u.pin)+'"><button class="btn small" data-savepin="'+esc(u.id)+'">Lưu mã</button><button class="btn small danger" data-deluser="'+esc(u.id)+'">Xóa</button></div>').join('')+
+   USERS.map(u=>'<div class="row" style="border-top:1px solid var(--line);padding-top:8px"><b style="min-width:90px">'+esc(u.name)+'</b><input style="flex:1;min-width:90px" data-pinfor="'+esc(u.id)+'" value="'+esc(u.pin)+'"><button class="btn small" data-savepin="'+esc(u.id)+'">Lưu mã</button><button class="btn small" data-link="'+esc(u.id)+'">Sao chép link</button><button class="btn small danger" data-deluser="'+esc(u.id)+'">Xóa</button></div>').join('')+
    '<div class="grid2 keep" style="border-top:1px solid var(--line);padding-top:10px"><label>Tên người dùng<input id="u-name" autocomplete="off"></label><label>Mã truy cập (ít nhất 4 ký tự)<input id="u-pin" autocomplete="off"></label></div>'+
    '<div class="row"><button class="btn small primary" id="u-add">+ Thêm người dùng</button></div><div id="u-err" class="status bad"></div>';
   box.querySelectorAll('[data-v]').forEach(b=>b.onclick=()=>{VIEWAS=b.dataset.v;sellers=[];loaded=false;cacheLoad();renderAll();loadAll(false);});
@@ -717,6 +718,8 @@ function renderUsers(){
     try{setU(await api('saveUser',{user:{name,pin}}));toast('Đã thêm');}catch(e){err(String(e.message).indexOf('trùng')>=0?'Mã này đã có người dùng, chọn mã khác.':'Chưa lưu được, thử lại.');}};
   box.querySelectorAll('[data-savepin]').forEach(b=>b.onclick=async()=>{const id=b.dataset.savepin,u=USERS.find(x=>x.id===id),pin=box.querySelector('[data-pinfor="'+id+'"]').value.trim();
     if(pin.length<4)return err('Mã cần ít nhất 4 ký tự.');try{setU(await api('saveUser',{user:{id,name:u.name,pin}}));toast('Đã đổi mã');}catch(e){err(String(e.message).indexOf('trùng')>=0?'Mã này đã có người dùng, chọn mã khác.':'Chưa lưu được, thử lại.');}});
+  box.querySelectorAll('[data-link]').forEach(b=>b.onclick=async()=>{const u=USERS.find(x=>x.id===b.dataset.link);const url=location.origin+location.pathname+'?k='+encodeURIComponent(u.pin);
+    try{await navigator.clipboard.writeText(url);toast('Đã sao chép link của '+u.name);}catch(e){prompt('Sao chép link này:',url);}});
   box.querySelectorAll('[data-deluser]').forEach(b=>b.onclick=async()=>{if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='Bấm lại để xóa';return;}
     try{const id=b.dataset.deluser;const r=await api('deleteUser',{id});if(VIEWAS===id)VIEWAS='';setU(r);toast('Đã xóa mã truy cập (dữ liệu vẫn giữ trong Sheet)');}catch(e){err('Chưa xóa được.');}});
 }
