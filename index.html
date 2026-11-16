@@ -162,7 +162,10 @@ body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset
   </section>
 
   <section id="pane-set" class="stack" hidden>
+    <div class="card stack" id="c-prods"></div>
     <div class="card stack">
+      <b>Mặc định chung</b>
+      <div class="note">Dùng cho loại hàng nào anh chưa cài riêng ở trên.</div>
       <div class="grid2">
         <label>Cước xe (đ / km, chạy 1 chuyến)<input id="c-rateKm" class="numfmt" inputmode="numeric"></label>
         <label>Tải trọng xe (tấn)<input id="c-truckTons" class="numfmt" inputmode="numeric"></label>
@@ -257,7 +260,9 @@ $('#places').innerHTML=PROV.map(s=>'<option value="'+esc(s.split('|')[0])+'">').
 
 /* ---------- dữ liệu: Google Sheets qua Apps Script ---------- */
 const PRODUCTS=['Viên nén bả điều','Viên nén gỗ','Dăm chip','Củi đòn','Trấu viên'];
-const DEF={rateKm:18000,truckTons:15,trips:1,loadKg:60,marginKg:100,factor:1.3};
+const DEF={rateKm:18000,truckTons:15,trips:1,loadKg:60,marginKg:100,factor:1.3,'p|Củi đòn|truckTons':20,'p|Viên nén bả điều|truckTons':40};
+const PK=[['truckTons','Tải trọng xe (tấn)'],['rateKm','Cước xe (đ/km)'],['loadKg','Bốc xếp (đ/kg)'],['marginKg','Lãi (đ/kg)']];
+function pc(p,k){const v=cfg['p|'+p+'|'+k];return v>0?v:cfg[k];}
 let sellers=[],cfg=Object.assign({},DEF),loaded=false,PIN='';
 const LS='nguonhang-pwa-v1';
 try{PIN=localStorage.getItem('nh-pin')||'';}catch(e){}
@@ -328,10 +333,10 @@ async function roadKms(dest,list){
 }
 
 /* ---------- tính giá ---------- */
-function quote(price,km,margin){
-  const trip=km*cfg.rateKm*cfg.trips;
-  const perKg=trip/(cfg.truckTons*1000);
-  const cost=price+perKg+cfg.loadKg;
+function quote(price,km,margin,prod){
+  const trip=km*pc(prod,'rateKm')*cfg.trips;
+  const perKg=trip/(pc(prod,'truckTons')*1000);
+  const cost=price+perKg+pc(prod,'loadKg');
   const offer=Math.round((cost+margin)/10)*10;
   return {trip,perKg,cost,offer};
 }
@@ -399,8 +404,8 @@ function rowFor(s){
     else{km=Math.round(hav(s.lat,s.lng,QS.dest.lat,QS.dest.lng)*cfg.factor);src='ước tính';}
   }
   if(ov.km!=null){km=ov.km;src='anh nhập';}
-  const margin=ov.margin!=null?ov.margin:cfg.marginKg;
-  const q=km!=null&&it?quote(it.price,km,margin):null;
+  const margin=ov.margin!=null?ov.margin:pc(QS.product,'marginKg');
+  const q=km!=null&&it?quote(it.price,km,margin,QS.product):null;
   return {s,it,km,src,q,margin,age:daysAgo(it&&it.date)};
 }
 function renderResults(){
@@ -434,11 +439,11 @@ function cardHTML(r,tons){
 }
 function calcHTML(r,tons){
   const q=r.q,it=r.it;
-  const trips=tons?Math.ceil(tons/cfg.truckTons):0;
+  const trips=tons?Math.ceil(tons/pc(QS.product,'truckTons')):0;
   return '<table class="calc num">'+
     '<tr><td>Giá mua tại nơi bán</td><td>'+fmt(it.price)+' đ/kg</td></tr>'+
-    '<tr><td>Cước xe: '+fmt(r.km)+' km × '+fmt(cfg.rateKm)+' đ'+(cfg.trips===2?' × 2':'')+' = '+fmt(q.trip)+' đ/chuyến<br><span class="note">chia '+fmt(cfg.truckTons)+' tấn/xe</span></td><td>'+fmt(q.perKg)+' đ/kg</td></tr>'+
-    '<tr><td>Bốc xếp</td><td>'+fmt(cfg.loadKg)+' đ/kg</td></tr>'+
+    '<tr><td>Cước xe: '+fmt(r.km)+' km × '+fmt(pc(QS.product,'rateKm'))+' đ'+(cfg.trips===2?' × 2':'')+' = '+fmt(q.trip)+' đ/chuyến<br><span class="note">chia '+fmt(pc(QS.product,'truckTons'))+' tấn/xe</span></td><td>'+fmt(q.perKg)+' đ/kg</td></tr>'+
+    '<tr><td>Bốc xếp</td><td>'+fmt(pc(QS.product,'loadKg'))+' đ/kg</td></tr>'+
     '<tr><td>Giá vốn tới nơi khách</td><td>'+fmt(q.cost)+' đ/kg</td></tr>'+
     '<tr><td>Lãi</td><td>'+fmt(r.margin)+' đ/kg</td></tr>'+
     '<tr class="total"><td>Giá chào khách</td><td>'+fmt(q.offer)+' đ/kg<br>'+fmt(q.offer*1000)+' đ/tấn</td></tr>'+
@@ -649,8 +654,16 @@ $('#c-demo-clear').onclick=async()=>{const d=sellers.filter(s=>s.demo);if(!d.len
 
 /* ---------- Cài đặt ---------- */
 const CF=[['rateKm','#c-rateKm'],['truckTons','#c-truckTons'],['loadKg','#c-loadKg'],['marginKg','#c-marginKg']];
+function fillProdCfg(){
+  const box=$('#c-prods');if(!box)return;
+  box.innerHTML='<b>Cài đặt theo từng loại hàng</b><div class="note">Mỗi loại hàng một xe, một cước riêng. Ô để trống thì dùng số mặc định chung ở dưới.</div>'+
+    allProducts().map(p=>'<div class="stack" style="border-top:1px solid var(--line);padding-top:10px"><b>'+esc(p)+'</b><div class="grid2">'+
+      PK.map(([k,l])=>'<label>'+l+'<input class="numfmt" inputmode="numeric" data-pp="'+esc(p)+'" data-pk="'+k+'" value="'+(cfg['p|'+p+'|'+k]>0?fmt(cfg['p|'+p+'|'+k]):'')+'" placeholder="'+fmt(cfg[k])+' (chung)"></label>').join('')+'</div></div>').join('');
+  box.querySelectorAll('input').forEach(i=>i.addEventListener('input',()=>{cfg['p|'+i.dataset.pp+'|'+i.dataset.pk]=parseN(i.value);saveCfgSoon();if(QS.searched)renderResults();}));
+}
 function fillCfg(force){
   if(!force&&$('#pane-set').contains(document.activeElement))return;
+  fillProdCfg();
   CF.forEach(([k,sel])=>{$(sel).value=fmt(cfg[k]);});
   $('#c-trips').value=String(cfg.trips);$('#c-factor').value=String(cfg.factor).replace('.',',');
 }
