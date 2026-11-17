@@ -130,6 +130,9 @@ body{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset
           <input id="q-tons" class="numfmt" inputmode="numeric" placeholder="vd: 20">
         </label>
       </div>
+      <label>Cước xe tự nhập (đ/kg)
+        <input id="q-fr" class="numfmt" inputmode="numeric" placeholder="để trống thì app tự tính, vd: 300">
+      </label>
       <label>Nơi giao hàng
         <input id="q-dest" data-ac="1" autocomplete="off" placeholder="vd: Củ Chi, TP.HCM hoặc xã A, huyện B, tỉnh C">
       </label>
@@ -402,10 +405,13 @@ function loadKgFor(prod,tons){
 function quote(price,km,margin,prod,tons){
   const trip=km*pc(prod,'rateKm')*cfg.trips;
   const loadKg=loadKgFor(prod,tons);
-  const perKg=trip/loadKg;
+  const fr=parseN($('#q-fr').value);
+  const manual=fr>0;
+  const perKg=manual?fr:trip/loadKg;
+  const tripF=manual?Math.round(fr*loadKg):trip;
   const cost=price+perKg+pc(prod,'loadKg');
   const offer=Math.round((cost+margin)/10)*10;
-  return {trip,perKg,cost,offer,loadKg};
+  return {trip:tripF,perKg,cost,offer,loadKg,manual};
 }
 function allProducts(){const set=new Set(PRODUCTS);sellers.forEach(s=>(s.items||[]).forEach(i=>i.product&&set.add(i.product)));return Array.from(set);}
 function located(s){return s.lat!=null&&s.lng!=null&&isFinite(s.lat)&&isFinite(s.lng);}
@@ -499,7 +505,7 @@ function ageChip(age){if(age==null)return '';if(age>14)return '<span class="chip
 function fmt1(n){return Number(n).toLocaleString('vi-VN',{maximumFractionDigits:1});}
 function freightLine(r){
   const kg=r.q.loadKg,pk=r.q.perKg;
-  return '<div class="note num" style="margin-top:6px">Cước xe '+fmt(r.km)+' km'+(cfg.trips===2?' (khứ hồi)':'')+': <b>'+fmt(kg)+' kg × '+fmt1(pk)+' đ/kg = '+fmt(r.q.trip)+' đ</b></div>';
+  return '<div class="note num" style="margin-top:6px">Cước xe '+(r.q.manual?'tự nhập, ':'')+fmt(r.km)+' km'+(cfg.trips===2?' (khứ hồi)':'')+': <b>'+fmt(kg)+' kg × '+fmt1(pk)+' đ/kg = '+fmt(r.q.trip)+' đ</b></div>';
 }
 function loadLine(r){
   const u=pc(QS.product,'loadKg');
@@ -564,6 +570,7 @@ $('#q-go').onclick=()=>runSearch();
 $('#q-dest').addEventListener('keydown',e=>{if(e.key==='Enter')runSearch();});
 $('#q-product').addEventListener('change',()=>{if(QS.searched)runSearch(true);});
 $('#q-tons').addEventListener('input',()=>{if(QS.searched)renderResults();});
+$('#q-fr').addEventListener('input',()=>{if(QS.searched)renderResults();});
 document.querySelectorAll('#q-sort [data-sort]').forEach(b=>b.onclick=()=>{QS.sort=b.dataset.sort;if(QS.searched)renderResults();else document.querySelectorAll('#q-sort [data-sort]').forEach(x=>x.className='btn small'+(x.dataset.sort===QS.sort?' primary':''));});
 
 document.addEventListener('input',e=>{
