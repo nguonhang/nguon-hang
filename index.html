@@ -428,10 +428,33 @@ function fillProducts(){
   QS.product=sel.value;
   $('#products').innerHTML=list.map(p=>'<option value="'+esc(p)+'">').join('');
 }
+async function resolveMapsLink(txt){
+  const put=(disp,r,src)=>{const lab=src?disp+' ('+src+')':disp;const f={lat:r.lat,lng:r.lng,label:lab};PLC[norm(disp)]=f;cacheSave();return {disp,f};};
+  const c=parseMapsInput(txt);
+  if(c)return put('Vị trí Google Maps ('+c.lat.toFixed(4)+', '+c.lng.toFixed(4)+')',c,'');
+  const m=txt.match(/\/maps\/(?:place|search|dir)\/([^\/@?]+)/);
+  if(m){
+    let name=m[1].replace(/\+/g,' ');try{name=decodeURIComponent(name);}catch(e){}
+    const parts=name.split(',').map(s=>s.trim()).filter(Boolean);
+    for(let i=0;i<Math.max(1,parts.length-1)&&i<4;i++){
+      if(i>0)await new Promise(r=>setTimeout(r,1100));
+      const r=await osmLocate(parts.slice(i).join(', '));
+      if(r)return put(parts.slice(0,2).join(', '),r,'bản đồ');
+    }
+  }
+  return null;
+}
 async function resolveDest(){
-  const txt=$('#q-dest').value.trim(),st=$('#q-status');
+  let txt=$('#q-dest').value.trim();const st=$('#q-status');
   if(!txt){st.className='status bad';st.textContent='Nhập nơi giao hàng.';return false;}
-  let f=findPlace(txt);
+  let f=null;
+  if(/^https?:\/\//i.test(txt)||/google\.[a-z.]+\/maps|goo\.gl|maps\.app/i.test(txt)){
+    st.className='status';st.textContent='Đang đọc vị trí từ link Google Maps...';
+    const rl=await resolveMapsLink(txt);
+    if(!rl){QS.dest=null;st.className='status bad';st.innerHTML='Link này không có sẵn vị trí để app đọc (link rút gọn thì không đọc được). Anh mở link trong Google Maps, bấm chuột phải vào điểm đó rồi bấm dòng tọa độ để copy, dán vào đây. Hoặc gõ tên xã, huyện, tỉnh.';return false;}
+    txt=rl.disp;$('#q-dest').value=txt;f=rl.f;
+  }
+  if(!f)f=findPlace(txt);
   if(!f){
     st.className='status';st.textContent='Địa danh này chưa có sẵn, đang tìm trên bản đồ...';
     const r=await osmLocate(txt);
@@ -480,6 +503,17 @@ function rowFor(s){
   const margin=ov.margin!=null?ov.margin:pc(QS.product,'marginKg');
   const q=km!=null&&it?quote(it.price,km,margin,QS.product,parseN($('#q-tons').value)):null;
   return {s,it,km,src,q,margin,age:daysAgo(it&&it.date)};
+}
+function sumHTML(rows,ok){
+  const avg=a=>a.reduce((x,y)=>x+y,0)/a.length;
+  const buy=rows.map(r=>r.it.price).filter(v=>v>0);
+  if(!buy.length)return '';
+  const off=ok.filter(r=>r.q).map(r=>r.q.offer);
+  const rng=a=>' <span style="opacity:.75">(thấp nhất '+fmt(Math.min.apply(null,a))+', cao nhất '+fmt(Math.max.apply(null,a))+')</span>';
+  let h='<div class="card" style="padding:10px 14px"><div class="note num"><b>Trung bình '+esc(QS.product)+'</b></div>'+
+    '<div class="note num" style="margin-top:4px">Giá mua vào: <b>'+fmt(Math.round(avg(buy)))+' đ/kg</b> · '+buy.length+' nguồn'+(buy.length>1?rng(buy):'')+'</div>';
+  if(off.length)h+='<div class="note num" style="margin-top:4px">Giá bán ra (giá giao): <b>'+fmt(Math.round(avg(off)))+' đ/kg</b> · '+off.length+' nguồn'+(off.length>1?rng(off):'')+'</div>';
+  return h+'</div>';
 }
 function renderResults(){
   const box=$('#results');
